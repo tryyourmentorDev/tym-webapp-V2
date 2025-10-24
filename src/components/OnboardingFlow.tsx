@@ -16,7 +16,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     interests: [],
     goals: [],
     experienceLevel: "",
-    industry: "",
+    educationLevel: "",
   });
 
   const expertiseOptions = [
@@ -48,20 +48,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     "Executive (13+ years)",
   ];
 
-  const industries = [
-    "Technology",
-    "Healthcare",
-    "Finance",
-    "Education",
-    "Retail/E-commerce",
-    "Manufacturing",
-    "Consulting",
-    "Media/Entertainment",
-    "Non-profit",
-    "Government",
-    "Real Estate",
-    "Energy",
-    "Transportation",
+  const educationLevels = [
+    "High School",
+    "Diploma",
+    "Higher Diploma",
+    "Bachelor's Degree",
+    "Post Graduate Diploma",
+    "Post Graduate Degree",
+    "Doctorate (PhD)",
     "Other",
   ];
 
@@ -88,7 +82,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       case 2:
         return (formData.goals?.length || 0) >= 1;
       case 3:
-        return formData.experienceLevel && formData.industry;
+        return formData.experienceLevel && formData.educationLevel;
       default:
         return false;
     }
@@ -225,7 +219,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             </div>
           )}
 
-          {/* Step 3: Experience & Industry */}
+          {/* Step 3: Education & Experience */}
           {currentStep === 3 && (
             <div className="bg-white rounded-2xl p-8 shadow-sm">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -237,6 +231,33 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               </p>
 
               <div className="space-y-8">
+                {/* Education Level */}
+                <div>
+                  <label className="block text-lg font-semibold text-gray-900 mb-4">
+                    What is your highest education level?
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {educationLevels.map((education) => (
+                      <button
+                        key={education}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            educationLevel: education,
+                          })
+                        }
+                        className={`p-4 rounded-xl text-left transition-all ${
+                          formData.educationLevel === education
+                            ? "bg-purple-600 text-white shadow-md"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        <span className="font-medium">{education}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Experience Level */}
                 <div>
                   <label className="block text-lg font-semibold text-gray-900 mb-4">
@@ -256,28 +277,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                         }`}
                       >
                         <span className="font-medium">{level}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Industry */}
-                <div>
-                  <label className="block text-lg font-semibold text-gray-900 mb-4">
-                    Which industry are you in?
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {industries.map((industry) => (
-                      <button
-                        key={industry}
-                        onClick={() => setFormData({ ...formData, industry })}
-                        className={`p-4 rounded-xl text-left transition-all ${
-                          formData.industry === industry
-                            ? "bg-orange-600 text-white shadow-md"
-                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        <span className="font-medium">{industry}</span>
                       </button>
                     ))}
                   </div>
