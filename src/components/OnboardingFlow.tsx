@@ -27,18 +27,18 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   ];
 
   const goalOptions = [
-    "Career Transition",
-    "Skill Development",
-    "Leadership Growth",
-    "Starting a Business",
-    "Job Search Strategy",
-    "Salary Negotiation",
-    "Work-Life Balance",
-    "Technical Skills",
-    "Industry Knowledge",
-    "Networking",
+    "Find a job",
+    "Technical Skills Improvement",
+    "Soft Skills Development",
     "Interview Preparation",
+    "Communication Skills",
+    "Career Transition",
+    "Leadership Growth",
+    "Job Search Strategy",
+    "Industry Knowledge",
+    "Meet Industry Experts",
     "Project Management",
+    "Other",
   ];
 
   const experienceLevels = [
