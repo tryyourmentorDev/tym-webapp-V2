@@ -33,6 +33,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     sessionExpectations: "",
     selectedDate: "",
     selectedTime: "",
+    cv: null as File | null,
   });
 
   // Get mentor-specific availability data
@@ -54,9 +55,10 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       !bookingForm.lastName ||
       !bookingForm.email ||
       !bookingForm.selectedDate ||
-      !bookingForm.selectedTime
+      !bookingForm.selectedTime ||
+      !bookingForm.cv
     ) {
-      alert("Please fill in all required fields");
+      alert("Please fill in all required fields including uploading your CV");
       return;
     }
 
@@ -73,15 +75,46 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       sessionExpectations: "",
       selectedDate: "",
       selectedTime: "",
+      cv: null,
     });
     setShowBookingModal(false);
   };
 
-  const updateBookingForm = (field: string, value: string) => {
+  const updateBookingForm = (field: string, value: string | File | null) => {
     setBookingForm((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleCVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type (PDF, DOC, DOCX)
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        alert("Please upload a PDF, DOC, or DOCX file");
+        event.target.value = ""; // Reset file input
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert("File size should be less than 5MB");
+        event.target.value = ""; // Reset file input
+        return;
+      }
+
+      updateBookingForm("cv", file);
+    } else {
+      updateBookingForm("cv", null);
+    }
   };
 
   const getMinDate = (): string => {
@@ -535,6 +568,28 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                       placeholder="Enter your email address"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Upload CV/Resume *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        onChange={handleCVUpload}
+                        accept=".pdf,.doc,.docx"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      {bookingForm.cv && (
+                        <p className="text-sm text-green-600 mt-1">
+                          ✓ {bookingForm.cv.name} uploaded successfully
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Accepted formats: PDF, DOC, DOCX (Max 5MB)
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Session Details */}
@@ -607,7 +662,8 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     !bookingForm.lastName ||
                     !bookingForm.email ||
                     !bookingForm.selectedDate ||
-                    !bookingForm.selectedTime
+                    !bookingForm.selectedTime ||
+                    !bookingForm.cv
                   }
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
                 >
