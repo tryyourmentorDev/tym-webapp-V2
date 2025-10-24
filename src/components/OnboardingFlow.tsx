@@ -21,19 +21,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
   const expertiseOptions = [
     "Software Engineering",
-    "Data Science",
-    "Product Management",
-    "UX/UI Design",
-    "Marketing",
-    "Sales",
-    "Finance",
-    "Entrepreneurship",
-    "DevOps",
-    "AI/Machine Learning",
-    "Cybersecurity",
-    "Consulting",
-    "HR & Recruiting",
-    "Operations",
+    "Quality Engineering",
+    "Business Analysis",
   ];
 
   const goalOptions = [
