@@ -484,37 +484,6 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                 Book a Session with {mentor.name}
               </h3>
 
-              {/* Mentor Availability Info */}
-              <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">
-                  Availability Information
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
-                  <div>
-                    <span className="font-medium">Working Hours:</span>{" "}
-                    {workingHours.start} - {workingHours.end}
-                    {workingHours.timezone && ` (${workingHours.timezone})`}
-                  </div>
-                  <div>
-                    <span className="font-medium">Available Days:</span>{" "}
-                    {workingDays
-                      .map((day) => {
-                        const dayNames = [
-                          "Sun",
-                          "Mon",
-                          "Tue",
-                          "Wed",
-                          "Thu",
-                          "Fri",
-                          "Sat",
-                        ];
-                        return dayNames[day];
-                      })
-                      .join(", ")}
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
