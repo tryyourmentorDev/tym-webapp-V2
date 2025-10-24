@@ -17,6 +17,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     goals: [],
     experienceLevel: "",
     educationLevel: "",
+    jobRole: "",
   });
 
   const expertiseOptions = [
@@ -52,20 +53,50 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const educationLevels = [
     "High School",
     "Diploma",
-    "Higher Diploma",
+
     "Bachelor's Degree",
-    "Post Graduate Diploma",
-    "Post Graduate Degree",
-    "Doctorate (PhD)",
+    "Master's Degree",
     "Other",
   ];
 
-  const handleInterestToggle = (interest: string) => {
-    const current = formData.interests || [];
-    const updated = current.includes(interest)
-      ? current.filter((i) => i !== interest)
-      : [...current, interest];
-    setFormData({ ...formData, interests: updated });
+  // Job roles mapping based on expertise areas
+  const jobRolesMapping: { [key: string]: string[] } = {
+    "Software Engineering": [
+      "Intern Software Engineer",
+      "Associate Software Engineer",
+      "Software Engineer",
+      "Senior Software Engineer",
+      "Associate Technical Lead",
+      "Technical Lead",
+      "Senior Technical Lead",
+      "Software Architect",
+    ],
+    "Quality Engineering": [
+      "Intern Quality Engineer",
+      "Associate Quality Engineer",
+      "Quality Engineer",
+      "Senior Quality Engineer",
+      "Quality Lead",
+      "Senior Quality Lead",
+      "Software Architect",
+    ],
+    "Business Analysis": [
+      "Business Analyst Intern",
+      "Junior Business Analyst",
+      "Business Analyst",
+      "Senior Business Analyst",
+      "Lead Business Analyst",
+    ],
+  };
+
+  // Get job roles for selected expertise
+  const getJobRolesForExpertise = (): string[] => {
+    const selectedExpertise = formData.interests?.[0];
+    return selectedExpertise ? jobRolesMapping[selectedExpertise] || [] : [];
+  };
+
+  const handleInterestSelect = (interest: string) => {
+    setFormData({ ...formData, interests: [interest], jobRole: "" });
   };
 
   const handleGoalToggle = (goal: string) => {
@@ -83,7 +114,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       case 2:
         return (formData.goals?.length || 0) >= 1;
       case 3:
-        return formData.experienceLevel && formData.educationLevel;
+        return (
+          formData.experienceLevel &&
+          formData.educationLevel &&
+          formData.jobRole
+        );
       default:
         return false;
     }
@@ -150,8 +185,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 What areas of expertise are you interested in?
               </h2>
               <p className="text-gray-600 mb-8">
-                Select the fields where you'd like to learn and grow. Choose all
-                that apply.
+                Select the field where you'd like to learn and grow the most.
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -160,7 +194,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   return (
                     <button
                       key={interest}
-                      onClick={() => handleInterestToggle(interest)}
+                      onClick={() => handleInterestSelect(interest)}
                       className={`p-4 rounded-xl text-left transition-all ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-md transform scale-105"
@@ -175,8 +209,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
               {(formData.interests?.length || 0) > 0 && (
                 <div className="mt-6 text-sm text-gray-600">
-                  Selected {formData.interests?.length} area
-                  {(formData.interests?.length || 0) > 1 ? "s" : ""}
+                  Selected: {formData.interests?.[0]}
                 </div>
               )}
             </div>
@@ -282,6 +315,38 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Job Roles - Only show if expertise is selected */}
+                {formData.interests && formData.interests.length > 0 && (
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-900 mb-4">
+                      What is your current or target job role?
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {getJobRolesForExpertise().map((role) => (
+                        <button
+                          key={role}
+                          onClick={() =>
+                            setFormData({ ...formData, jobRole: role })
+                          }
+                          className={`p-4 rounded-xl text-left transition-all ${
+                            formData.jobRole === role
+                              ? "bg-indigo-600 text-white shadow-md"
+                              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <span className="font-medium">{role}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {getJobRolesForExpertise().length === 0 && (
+                      <p className="text-gray-500 text-sm">
+                        Please select an area of expertise first to see
+                        available job roles.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

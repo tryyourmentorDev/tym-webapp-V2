@@ -9,6 +9,7 @@ export interface Mentee {
   goals: string[];
   experienceLevel: string;
   educationLevel: string;
+  jobRole: string;
 }
 
 export interface Mentor {
