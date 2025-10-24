@@ -42,10 +42,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
   const experienceLevels = [
     "Student/Entry Level",
-    "Junior (1-3 years)",
-    "Mid-level (4-7 years)",
-    "Senior (8-12 years)",
-    "Executive (13+ years)",
+    "Junior (1-2 years)",
+    "Mid-level (3-5 years)",
+    "Senior (6-8 years)",
+    "Mid Senior (8-10 years)",
+    "Executive (11+ years)",
   ];
 
   const educationLevels = [
