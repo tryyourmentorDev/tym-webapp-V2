@@ -29,8 +29,9 @@ export interface Mentor {
   image: string;
   industry: string;
   // Availability scheduling
-  unavailableDates?: string[]; // Array of dates in YYYY-MM-DD format that are completely unavailable
-  unavailableTimes?: { [date: string]: string[] }; // Object mapping dates to unavailable time slots
+  unavailableDateTime?: {
+    [date: string]: string[] | "full-day"; // "full-day" for entire day unavailable, or array of unavailable time slots
+  };
   workingHours?: {
     start: string; // "09:00"
     end: string; // "18:00"

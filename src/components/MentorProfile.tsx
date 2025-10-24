@@ -36,8 +36,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   });
 
   // Get mentor-specific availability data
-  const unavailableTimes = mentor.unavailableTimes || {};
-  const unavailableDates = mentor.unavailableDates || [];
+  const unavailableDateTime = mentor.unavailableDateTime || {};
   const workingHours = mentor.workingHours || { start: "09:00", end: "18:00" };
   const workingDays = mentor.workingDays || [1, 2, 3, 4, 5]; // Default to weekdays
 
@@ -103,8 +102,9 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     // Check if it's a working day for this mentor
     if (!workingDays.includes(dayOfWeek)) return false;
 
-    // Check if it's in the mentor's unavailable dates
-    if (unavailableDates.includes(dateString)) return false;
+    // Check if the entire day is unavailable
+    const dateAvailability = unavailableDateTime[dateString];
+    if (dateAvailability === "full-day") return false;
 
     // Check if it's in the past
     const today = new Date();
@@ -128,8 +128,15 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     if (!selectedDate || !isDateAvailable(selectedDate)) return [];
 
     const allTimes = generateTimeSlots();
-    const unavailableForDate = unavailableTimes[selectedDate] || [];
+    const dateAvailability = unavailableDateTime[selectedDate];
 
+    // If the entire day is unavailable, return empty array
+    if (dateAvailability === "full-day") return [];
+
+    // If there are specific unavailable times, filter them out
+    const unavailableForDate = Array.isArray(dateAvailability)
+      ? dateAvailability
+      : [];
     return allTimes.filter((time) => !unavailableForDate.includes(time));
   };
 

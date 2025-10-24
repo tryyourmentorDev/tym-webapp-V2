@@ -140,11 +140,13 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: ["2024-12-25", "2024-12-31", "2025-01-01"],
-        unavailableTimes: {
-          "2024-11-15": ["10:00", "14:00"],
-          "2024-11-16": ["09:00", "15:00"],
-          "2024-11-20": ["11:00", "16:00"],
+        unavailableDateTime: {
+          "2024-12-25": "full-day", // Christmas - completely unavailable
+          "2024-12-31": "full-day", // New Year's Eve - completely unavailable
+          "2025-01-01": "full-day", // New Year's Day - completely unavailable
+          "2024-11-15": ["10:00", "14:00"], // Specific times unavailable
+          "2024-11-16": ["09:00", "15:00"], // Specific times unavailable
+          "2024-11-20": ["11:00", "16:00"], // Specific times unavailable
         },
         workingHours: {
           start: "09:00",
@@ -178,14 +180,12 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: [
-          "2025-11-28",
-          "2025-11-29",
-          "2025-12-20",
-          "2025-12-25",
-          "2025-12-31",
-        ],
-        unavailableTimes: {
+        unavailableDateTime: {
+          "2025-11-28": "full-day", // Thanksgiving
+          "2025-11-29": "full-day", // Black Friday
+          "2025-12-20": "full-day", // Personal day
+          "2025-12-25": "full-day", // Christmas
+          "2025-12-31": "full-day", // New Year's Eve
           "2024-11-18": ["09:00", "10:00", "11:00"], // Morning blocked
           "2024-11-22": ["14:00", "15:00", "16:00", "17:00"], // Afternoon blocked
           "2024-11-25": ["13:00", "14:00"], // Lunch meetings
@@ -218,8 +218,10 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: ["2024-12-23", "2024-12-24", "2024-12-25"],
-        unavailableTimes: {
+        unavailableDateTime: {
+          "2024-12-23": "full-day", // Holiday break
+          "2024-12-24": "full-day", // Christmas Eve
+          "2024-12-25": "full-day", // Christmas
           "2024-11-14": ["12:00", "13:00"], // Lunch break
           "2024-11-21": ["10:00", "11:00"], // Team meetings
           "2024-11-27": ["15:00", "16:00", "17:00"], // Conference calls
@@ -252,13 +254,11 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: [
-          "2024-12-25",
-          "2024-12-26",
-          "2025-01-01",
-          "2025-01-02",
-        ],
-        unavailableTimes: {
+        unavailableDateTime: {
+          "2024-12-25": "full-day", // Christmas
+          "2024-12-26": "full-day", // Boxing Day
+          "2025-01-01": "full-day", // New Year's Day
+          "2025-01-02": "full-day", // Extended holiday
           "2024-11-19": ["09:00", "10:00"], // Design review meetings
           "2024-11-26": ["14:00", "15:00"], // Client presentations
           "2024-12-03": ["11:00", "12:00"], // Team sync
@@ -291,11 +291,13 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: ["2024-11-28", "2024-11-29", "2024-12-25"],
-        unavailableTimes: {
+        unavailableDateTime: {
+          "2024-11-28": "full-day", // Thanksgiving
+          "2024-11-29": "full-day", // Black Friday
+          "2024-12-25": "full-day", // Christmas
           "2024-11-15": ["13:00", "14:00", "15:00"], // Marketing strategy meetings
           "2024-11-22": ["10:00", "11:00"], // Campaign reviews
-          "2024-11-29": ["16:00", "17:00"], // End of month reporting
+          "2024-11-27": ["16:00", "17:00"], // End of month reporting
         },
         workingHours: {
           start: "09:00",
@@ -325,15 +327,13 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
-        unavailableDates: [
-          "2024-11-25",
-          "2024-11-26",
-          "2024-11-27",
-          "2024-12-25",
-          "2024-12-31",
-        ],
-        unavailableTimes: {
-          "2024-11-14": ["09:00", "10:00", "11:00", "14:00", "15:00"], // Board meetings and investor calls
+        unavailableDateTime: {
+          "2024-11-25": "full-day", // Travel day
+          "2024-11-26": "full-day", // Conference
+          "2024-11-27": "full-day", // Conference
+          "2024-12-25": "full-day", // Christmas
+          "2024-12-31": "full-day", // New Year's Eve
+          "2025-11-14": ["09:00", "10:00", "11:00", "14:00", "15:00"], // Board meetings and investor calls
           "2024-11-21": ["13:00", "14:00", "15:00", "16:00"], // Due diligence meetings
           "2024-12-05": ["10:00", "11:00"], // Strategic planning
         },
