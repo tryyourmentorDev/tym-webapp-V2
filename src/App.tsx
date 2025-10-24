@@ -28,6 +28,15 @@ export interface Mentor {
   achievements: string[];
   image: string;
   industry: string;
+  // Availability scheduling
+  unavailableDates?: string[]; // Array of dates in YYYY-MM-DD format that are completely unavailable
+  unavailableTimes?: { [date: string]: string[] }; // Object mapping dates to unavailable time slots
+  workingHours?: {
+    start: string; // "09:00"
+    end: string; // "18:00"
+    timezone?: string; // "UTC", "EST", etc.
+  };
+  workingDays?: number[]; // Array of days (0=Sunday, 1=Monday, etc.) when mentor is available
 }
 
 type AppStep = "landing" | "onboarding" | "discovery" | "profile";

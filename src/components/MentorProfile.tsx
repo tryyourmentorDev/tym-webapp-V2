@@ -25,12 +25,112 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
 }) => {
   const [showContactForm, setShowContactForm] = useState(false);
   const [message, setMessage] = useState("");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    sessionExpectations: "",
+    selectedDate: "",
+    selectedTime: "",
+  });
+
+  // Get mentor-specific availability data
+  const unavailableTimes = mentor.unavailableTimes || {};
+  const unavailableDates = mentor.unavailableDates || [];
+  const workingHours = mentor.workingHours || { start: "09:00", end: "18:00" };
+  const workingDays = mentor.workingDays || [1, 2, 3, 4, 5]; // Default to weekdays
 
   const handleSendMessage = () => {
     // In a real app, this would send the message
     alert(`Message sent to ${mentor.name}!`);
     setShowContactForm(false);
     setMessage("");
+  };
+
+  const handleBookingSubmit = () => {
+    // Validate required fields
+    if (
+      !bookingForm.firstName ||
+      !bookingForm.lastName ||
+      !bookingForm.email ||
+      !bookingForm.selectedDate ||
+      !bookingForm.selectedTime
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // In a real app, this would make an API call to book the session
+    alert(
+      `Session booked with ${mentor.name} on ${bookingForm.selectedDate} at ${bookingForm.selectedTime}!`
+    );
+
+    // Reset form and close modal
+    setBookingForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      sessionExpectations: "",
+      selectedDate: "",
+      selectedTime: "",
+    });
+    setShowBookingModal(false);
+  };
+
+  const updateBookingForm = (field: string, value: string) => {
+    setBookingForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const getMinDate = (): string => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  const getMaxDate = (): string => {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 60); // Allow booking up to 60 days in advance
+    return maxDate.toISOString().split("T")[0];
+  };
+
+  const isDateAvailable = (dateString: string): boolean => {
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
+
+    // Check if it's a working day for this mentor
+    if (!workingDays.includes(dayOfWeek)) return false;
+
+    // Check if it's in the mentor's unavailable dates
+    if (unavailableDates.includes(dateString)) return false;
+
+    // Check if it's in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
+  };
+
+  const generateTimeSlots = (): string[] => {
+    const times = [];
+    const startHour = parseInt(workingHours.start.split(":")[0]);
+    const endHour = parseInt(workingHours.end.split(":")[0]);
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      times.push(`${hour.toString().padStart(2, "0")}:00`);
+    }
+
+    return times;
+  };
+
+  const getAvailableTimes = (selectedDate: string): string[] => {
+    if (!selectedDate || !isDateAvailable(selectedDate)) return [];
+
+    const allTimes = generateTimeSlots();
+    const unavailableForDate = unavailableTimes[selectedDate] || [];
+
+    return allTimes.filter((time) => !unavailableForDate.includes(time));
   };
 
   return (
@@ -131,9 +231,12 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                   <MessageCircle className="w-5 h-5 mr-2" />
                   Send Message
                 </button>
-                <button className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors">
+                <button
+                  onClick={() => setShowBookingModal(true)}
+                  className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+                >
                   <Calendar className="w-5 h-5 mr-2" />
-                  Schedule Call
+                  Book Now
                 </button>
               </div>
             </div>
@@ -360,6 +463,187 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Book a Session with {mentor.name}
+              </h3>
+
+              {/* Mentor Availability Info */}
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                  Availability Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+                  <div>
+                    <span className="font-medium">Working Hours:</span>{" "}
+                    {workingHours.start} - {workingHours.end}
+                    {workingHours.timezone && ` (${workingHours.timezone})`}
+                  </div>
+                  <div>
+                    <span className="font-medium">Available Days:</span>{" "}
+                    {workingDays
+                      .map((day) => {
+                        const dayNames = [
+                          "Sun",
+                          "Mon",
+                          "Tue",
+                          "Wed",
+                          "Thu",
+                          "Fri",
+                          "Sat",
+                        ];
+                        return dayNames[day];
+                      })
+                      .join(", ")}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal Information */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-800">
+                    Personal Information
+                  </h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.firstName}
+                      onChange={(e) =>
+                        updateBookingForm("firstName", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.lastName}
+                      onChange={(e) =>
+                        updateBookingForm("lastName", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your last name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={bookingForm.email}
+                      onChange={(e) =>
+                        updateBookingForm("email", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your email address"
+                    />
+                  </div>
+                </div>
+
+                {/* Session Details */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-800">
+                    Session Details
+                  </h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Preferred Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={bookingForm.selectedDate}
+                      onChange={(e) =>
+                        updateBookingForm("selectedDate", e.target.value)
+                      }
+                      min={getMinDate()}
+                      max={getMaxDate()}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Preferred Time *
+                    </label>
+                    <select
+                      value={bookingForm.selectedTime}
+                      onChange={(e) =>
+                        updateBookingForm("selectedTime", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select a time</option>
+                      {getAvailableTimes(bookingForm.selectedDate).map(
+                        (time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Expectations */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  What would you like to learn or discuss in this session?
+                </label>
+                <textarea
+                  value={bookingForm.sessionExpectations}
+                  onChange={(e) =>
+                    updateBookingForm("sessionExpectations", e.target.value)
+                  }
+                  placeholder="Describe your goals, questions, or what you'd like to focus on during the session..."
+                  className="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 mt-8">
+                <button
+                  onClick={handleBookingSubmit}
+                  disabled={
+                    !bookingForm.firstName ||
+                    !bookingForm.lastName ||
+                    !bookingForm.email ||
+                    !bookingForm.selectedDate ||
+                    !bookingForm.selectedTime
+                  }
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
+                >
+                  Book Session
+                </button>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

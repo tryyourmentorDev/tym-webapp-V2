@@ -140,6 +140,18 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: ["2024-12-25", "2024-12-31", "2025-01-01"],
+        unavailableTimes: {
+          "2024-11-15": ["10:00", "14:00"],
+          "2024-11-16": ["09:00", "15:00"],
+          "2024-11-20": ["11:00", "16:00"],
+        },
+        workingHours: {
+          start: "09:00",
+          end: "17:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
       },
       {
         id: "2",
@@ -166,6 +178,24 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: [
+          "2025-11-28",
+          "2025-11-29",
+          "2025-12-20",
+          "2025-12-25",
+          "2025-12-31",
+        ],
+        unavailableTimes: {
+          "2024-11-18": ["09:00", "10:00", "11:00"], // Morning blocked
+          "2024-11-22": ["14:00", "15:00", "16:00", "17:00"], // Afternoon blocked
+          "2024-11-25": ["13:00", "14:00"], // Lunch meetings
+        },
+        workingHours: {
+          start: "10:00",
+          end: "18:00",
+          timezone: "EST",
+        },
+        workingDays: [1, 2, 3, 4], // Monday to Thursday (limited availability)
       },
       {
         id: "3",
@@ -188,6 +218,18 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: ["2024-12-23", "2024-12-24", "2024-12-25"],
+        unavailableTimes: {
+          "2024-11-14": ["12:00", "13:00"], // Lunch break
+          "2024-11-21": ["10:00", "11:00"], // Team meetings
+          "2024-11-27": ["15:00", "16:00", "17:00"], // Conference calls
+        },
+        workingHours: {
+          start: "08:00",
+          end: "16:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
       },
       {
         id: "4",
@@ -210,6 +252,23 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: [
+          "2024-12-25",
+          "2024-12-26",
+          "2025-01-01",
+          "2025-01-02",
+        ],
+        unavailableTimes: {
+          "2024-11-19": ["09:00", "10:00"], // Design review meetings
+          "2024-11-26": ["14:00", "15:00"], // Client presentations
+          "2024-12-03": ["11:00", "12:00"], // Team sync
+        },
+        workingHours: {
+          start: "09:00",
+          end: "18:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
       },
       {
         id: "5",
@@ -232,6 +291,18 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: ["2024-11-28", "2024-11-29", "2024-12-25"],
+        unavailableTimes: {
+          "2024-11-15": ["13:00", "14:00", "15:00"], // Marketing strategy meetings
+          "2024-11-22": ["10:00", "11:00"], // Campaign reviews
+          "2024-11-29": ["16:00", "17:00"], // End of month reporting
+        },
+        workingHours: {
+          start: "09:00",
+          end: "17:30",
+          timezone: "EST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
       },
       {
         id: "6",
@@ -254,6 +325,24 @@ class MentorService {
         image:
           "https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400",
         industry: "Technology",
+        unavailableDates: [
+          "2024-11-25",
+          "2024-11-26",
+          "2024-11-27",
+          "2024-12-25",
+          "2024-12-31",
+        ],
+        unavailableTimes: {
+          "2024-11-14": ["09:00", "10:00", "11:00", "14:00", "15:00"], // Board meetings and investor calls
+          "2024-11-21": ["13:00", "14:00", "15:00", "16:00"], // Due diligence meetings
+          "2024-12-05": ["10:00", "11:00"], // Strategic planning
+        },
+        workingHours: {
+          start: "10:00",
+          end: "16:00", // Limited hours as an executive
+          timezone: "CST",
+        },
+        workingDays: [2, 4], // Tuesday and Thursday only (very limited)
       },
     ];
   }
