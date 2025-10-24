@@ -30,6 +30,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     firstName: "",
     lastName: "",
     email: "",
+    city: "",
     sessionExpectations: "",
     selectedDate: "",
     selectedTime: "",
@@ -54,6 +55,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       !bookingForm.firstName ||
       !bookingForm.lastName ||
       !bookingForm.email ||
+      !bookingForm.city ||
       !bookingForm.selectedDate ||
       !bookingForm.selectedTime ||
       !bookingForm.cv
@@ -72,6 +74,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       firstName: "",
       lastName: "",
       email: "",
+      city: "",
       sessionExpectations: "",
       selectedDate: "",
       selectedTime: "",
@@ -571,6 +574,21 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.city}
+                      onChange={(e) =>
+                        updateBookingForm("city", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your city"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Upload CV/Resume *
                     </label>
                     <div className="relative">
@@ -661,6 +679,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     !bookingForm.firstName ||
                     !bookingForm.lastName ||
                     !bookingForm.email ||
+                    !bookingForm.city ||
                     !bookingForm.selectedDate ||
                     !bookingForm.selectedTime ||
                     !bookingForm.cv
