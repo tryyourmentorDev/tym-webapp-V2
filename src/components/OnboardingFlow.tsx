@@ -4,10 +4,12 @@ import type { Mentee } from "../App";
 
 interface OnboardingFlowProps {
   onComplete: (profile: Mentee) => void;
+  onBackToHome: () => void;
 }
 
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   onComplete,
+  onBackToHome,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<Mentee>>({
@@ -122,14 +124,17 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       {/* Header */}
       <header className="px-6 py-4 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <button
+            onClick={onBackToHome}
+            className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">
               Try Your Mentor
             </span>
-          </div>
+          </button>
           <div className="text-sm text-gray-600">Step {currentStep} of 3</div>
         </div>
       </header>

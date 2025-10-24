@@ -1,163 +1,28 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Search,
   Filter,
   Star,
   MapPin,
   Clock,
-  Globe,
   ChevronDown,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import type { Mentee, Mentor } from "../App";
+import { useMentors } from "../hooks/useMentors";
 
 interface MentorDiscoveryProps {
   menteeProfile: Mentee;
   onMentorSelect: (mentor: Mentor) => void;
+  onBackToHome: () => void;
 }
-
-// Mock mentor data
-const mockMentors: Mentor[] = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    title: "Senior Software Engineer",
-    company: "Google",
-    expertise: [
-      "Software Engineering",
-      "AI/Machine Learning",
-      "Career Transition",
-    ],
-    experience: "Senior (8-12 years)",
-    rating: 4.9,
-    reviewCount: 127,
-    availability: "Available",
-    location: "San Francisco, CA",
-    languages: ["English", "Mandarin"],
-    bio: "Passionate about helping engineers transition into senior roles and develop leadership skills.",
-    achievements: [
-      "Led team of 15 engineers",
-      "Built ML systems serving 1B+ users",
-      "Published 12 papers",
-    ],
-    image:
-      "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-  {
-    id: "2",
-    name: "Marcus Johnson",
-    title: "VP of Product",
-    company: "Stripe",
-    expertise: ["Product Management", "Entrepreneurship", "Leadership Growth"],
-    experience: "Executive (13+ years)",
-    rating: 4.8,
-    reviewCount: 89,
-    availability: "Limited",
-    location: "Remote",
-    languages: ["English", "Spanish"],
-    bio: "Expert in product strategy and building teams that ship world-class products.",
-    achievements: [
-      "Scaled product from 0 to $100M ARR",
-      "Built products used by 50M+ users",
-      "Ex-founder",
-    ],
-    image:
-      "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-  {
-    id: "3",
-    name: "Emily Rodriguez",
-    title: "Data Science Director",
-    company: "Netflix",
-    expertise: ["Data Science", "AI/Machine Learning", "Technical Skills"],
-    experience: "Senior (8-12 years)",
-    rating: 5.0,
-    reviewCount: 156,
-    availability: "Available",
-    location: "Los Angeles, CA",
-    languages: ["English", "Spanish", "Portuguese"],
-    bio: "Helping data professionals advance their careers and master advanced analytics.",
-    achievements: [
-      "Built recommendation algorithms",
-      "PhD in Computer Science",
-      "TEDx speaker",
-    ],
-    image:
-      "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-  {
-    id: "4",
-    name: "David Kim",
-    title: "Design Lead",
-    company: "Apple",
-    expertise: ["UX/UI Design", "Product Management", "Creative Direction"],
-    experience: "Senior (8-12 years)",
-    rating: 4.9,
-    reviewCount: 203,
-    availability: "Available",
-    location: "Cupertino, CA",
-    languages: ["English", "Korean"],
-    bio: "Award-winning designer passionate about creating intuitive user experiences.",
-    achievements: [
-      "Led design for iOS features",
-      "Design awards winner",
-      "Design thinking workshops",
-    ],
-    image:
-      "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-  {
-    id: "5",
-    name: "Jennifer Walsh",
-    title: "Marketing Director",
-    company: "HubSpot",
-    expertise: ["Marketing", "Sales", "Leadership Growth"],
-    experience: "Senior (8-12 years)",
-    rating: 4.7,
-    reviewCount: 94,
-    availability: "Available",
-    location: "Boston, MA",
-    languages: ["English", "French"],
-    bio: "Expert in growth marketing and building high-performing marketing teams.",
-    achievements: [
-      "Grew user base by 300%",
-      "Built $50M+ pipeline",
-      "Marketing awards",
-    ],
-    image:
-      "https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-  {
-    id: "6",
-    name: "Alex Thompson",
-    title: "Startup Founder & CEO",
-    company: "CloudTech (Acquired)",
-    expertise: ["Entrepreneurship", "Leadership Growth", "Sales"],
-    experience: "Executive (13+ years)",
-    rating: 4.8,
-    reviewCount: 178,
-    availability: "Limited",
-    location: "Austin, TX",
-    languages: ["English"],
-    bio: "Serial entrepreneur with 2 successful exits. Love helping first-time founders.",
-    achievements: [
-      "2 successful exits",
-      "Raised $50M+ funding",
-      "Forbes 30 under 30",
-    ],
-    image:
-      "https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400",
-    industry: "Technology",
-  },
-];
 
 export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
   menteeProfile,
   onMentorSelect,
+  onBackToHome,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
@@ -167,59 +32,24 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
   );
   const [showFilters, setShowFilters] = useState(false);
 
-  const expertiseOptions = Array.from(
-    new Set(mockMentors.flatMap((m) => m.expertise))
-  );
-  const experienceOptions = Array.from(
-    new Set(mockMentors.map((m) => m.experience))
-  );
-  const availabilityOptions = Array.from(
-    new Set(mockMentors.map((m) => m.availability))
-  );
-
-  const filteredMentors = useMemo(() => {
-    return mockMentors.filter((mentor) => {
-      const matchesSearch =
-        mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.expertise.some((exp) =>
-          exp.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-      const matchesExpertise =
-        selectedExpertise.length === 0 ||
-        selectedExpertise.some((exp) => mentor.expertise.includes(exp));
-
-      const matchesExperience =
-        selectedExperience.length === 0 ||
-        selectedExperience.includes(mentor.experience);
-
-      const matchesAvailability =
-        selectedAvailability.length === 0 ||
-        selectedAvailability.includes(mentor.availability);
-
-      return (
-        matchesSearch &&
-        matchesExpertise &&
-        matchesExperience &&
-        matchesAvailability
-      );
-    });
-  }, [searchTerm, selectedExpertise, selectedExperience, selectedAvailability]);
-
-  const recommendedMentors = useMemo(() => {
-    return filteredMentors.filter((mentor) =>
-      mentor.expertise.some((exp) => menteeProfile.interests.includes(exp))
-    );
-  }, [filteredMentors, menteeProfile.interests]);
-
-  const otherMentors = useMemo(() => {
-    return filteredMentors.filter(
-      (mentor) =>
-        !mentor.expertise.some((exp) => menteeProfile.interests.includes(exp))
-    );
-  }, [filteredMentors, menteeProfile.interests]);
+  // Use the custom hook to fetch mentors
+  const {
+    mentors: filteredMentors,
+    recommendedMentors,
+    otherMentors,
+    isLoading,
+    error,
+    refetch,
+    expertiseOptions,
+    experienceOptions,
+    availabilityOptions,
+  } = useMentors({
+    menteeProfile,
+    searchTerm,
+    selectedExpertise,
+    selectedExperience,
+    selectedAvailability,
+  });
 
   const toggleFilter = (
     value: string,
@@ -251,14 +81,17 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <button
+              onClick={onBackToHome}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            >
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Star className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900">
                 Try Your Mentor
               </span>
-            </div>
+            </button>
             <div className="text-sm text-gray-600">
               {filteredMentors.length} mentor
               {filteredMentors.length !== 1 ? "s" : ""} found
@@ -417,67 +250,109 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
 
         {/* Results */}
         <div className="space-y-8">
-          {/* Recommended Mentors */}
-          {recommendedMentors.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Recommended for You
-                <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                  {recommendedMentors.length}
-                </span>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recommendedMentors.map((mentor) => (
-                  <MentorCard
-                    key={mentor.id}
-                    mentor={mentor}
-                    onSelect={onMentorSelect}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Other Mentors */}
-          {otherMentors.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Other Mentors
-                <span className="ml-2 px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
-                  {otherMentors.length}
-                </span>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {otherMentors.map((mentor) => (
-                  <MentorCard
-                    key={mentor.id}
-                    mentor={mentor}
-                    onSelect={onMentorSelect}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* No Results */}
-          {filteredMentors.length === 0 && (
+          {/* Loading State */}
+          {isLoading && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No mentors found
+                Finding mentors...
+              </h3>
+              <p className="text-gray-600">
+                Please wait while we search for the perfect mentors for you
+              </p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !isLoading && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Something went wrong
               </h3>
               <p className="text-gray-600 mb-4">
-                Try adjusting your search or filters
+                {error || "Failed to fetch mentors. Please try again."}
               </p>
               <button
-                onClick={clearAllFilters}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={refetch}
+                className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Clear all filters
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
               </button>
             </div>
+          )}
+
+          {/* Success State - Show Results */}
+          {!isLoading && !error && (
+            <>
+              {/* Recommended Mentors */}
+              {recommendedMentors.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    Recommended for You
+                    <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                      {recommendedMentors.length}
+                    </span>
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {recommendedMentors.map((mentor) => (
+                      <MentorCard
+                        key={mentor.id}
+                        mentor={mentor}
+                        onSelect={onMentorSelect}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Mentors */}
+              {otherMentors.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    Other Mentors
+                    <span className="ml-2 px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
+                      {otherMentors.length}
+                    </span>
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {otherMentors.map((mentor) => (
+                      <MentorCard
+                        key={mentor.id}
+                        mentor={mentor}
+                        onSelect={onMentorSelect}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No Results */}
+              {filteredMentors.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No mentors found
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search or filters
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

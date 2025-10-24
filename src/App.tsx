@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { LandingPage } from './components/LandingPage';
-import { OnboardingFlow } from './components/OnboardingFlow';
-import { MentorDiscovery } from './components/MentorDiscovery';
-import { MentorProfile } from './components/MentorProfile';
+import { useState } from "react";
+import { LandingPage } from "./components/LandingPage";
+import { OnboardingFlow } from "./components/OnboardingFlow";
+import { MentorDiscovery } from "./components/MentorDiscovery";
+import { MentorProfile } from "./components/MentorProfile";
 
 export interface Mentee {
   interests: string[];
@@ -29,53 +29,64 @@ export interface Mentor {
   industry: string;
 }
 
-type AppStep = 'landing' | 'onboarding' | 'discovery' | 'profile';
+type AppStep = "landing" | "onboarding" | "discovery" | "profile";
 
 function App() {
-  const [currentStep, setCurrentStep] = useState<AppStep>('landing');
+  const [currentStep, setCurrentStep] = useState<AppStep>("landing");
   const [menteeProfile, setMenteeProfile] = useState<Mentee | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
 
   const handleGetStarted = () => {
-    setCurrentStep('onboarding');
+    setCurrentStep("onboarding");
   };
 
   const handleOnboardingComplete = (profile: Mentee) => {
     setMenteeProfile(profile);
-    setCurrentStep('discovery');
+    setCurrentStep("discovery");
   };
 
   const handleMentorSelect = (mentor: Mentor) => {
     setSelectedMentor(mentor);
-    setCurrentStep('profile');
+    setCurrentStep("profile");
   };
 
   const handleBackToDiscovery = () => {
-    setCurrentStep('discovery');
+    setCurrentStep("discovery");
+    setSelectedMentor(null);
+  };
+
+  const handleBackToHome = () => {
+    setCurrentStep("landing");
+    setMenteeProfile(null);
     setSelectedMentor(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {currentStep === 'landing' && (
+      {currentStep === "landing" && (
         <LandingPage onGetStarted={handleGetStarted} />
       )}
-      
-      {currentStep === 'onboarding' && (
-        <OnboardingFlow onComplete={handleOnboardingComplete} />
-      )}
-      
-      {currentStep === 'discovery' && menteeProfile && (
-        <MentorDiscovery 
-          menteeProfile={menteeProfile}
-          onMentorSelect={handleMentorSelect}
+
+      {currentStep === "onboarding" && (
+        <OnboardingFlow
+          onComplete={handleOnboardingComplete}
+          onBackToHome={handleBackToHome}
         />
       )}
-      
-      {currentStep === 'profile' && selectedMentor && (
-        <MentorProfile 
+
+      {currentStep === "discovery" && menteeProfile && (
+        <MentorDiscovery
+          menteeProfile={menteeProfile}
+          onMentorSelect={handleMentorSelect}
+          onBackToHome={handleBackToHome}
+        />
+      )}
+
+      {currentStep === "profile" && selectedMentor && (
+        <MentorProfile
           mentor={selectedMentor}
           onBack={handleBackToDiscovery}
+          onBackToHome={handleBackToHome}
         />
       )}
     </div>

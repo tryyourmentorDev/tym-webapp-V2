@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, Users, Target, Star, CheckCircle } from "lucide-react";
+import { ArrowRight, Users, Target, Star } from "lucide-react";
 
 interface LandingPageProps {
   onGetStarted: () => void;
