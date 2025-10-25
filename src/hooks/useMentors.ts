@@ -51,6 +51,18 @@ export const useMentors = ({
         interests: menteeProfile.interests,
       };
 
+      if (menteeProfile.industryId !== undefined) {
+        filters.industryId = menteeProfile.industryId;
+      }
+
+      if (menteeProfile.jobRoleId !== undefined) {
+        filters.jobRoleId = menteeProfile.jobRoleId;
+      }
+
+      if (menteeProfile.educationLevelId !== undefined) {
+        filters.educationLevelId = menteeProfile.educationLevelId;
+      }
+
       // Add search and filter parameters
       if (debouncedSearchTerm) filters.search = debouncedSearchTerm;
       if (selectedExpertise.length > 0) filters.expertise = selectedExpertise;
@@ -59,7 +71,10 @@ export const useMentors = ({
       if (selectedAvailability.length > 0)
         filters.availability = selectedAvailability;
 
-      const response = await mentorService.fetchMentorsWithFallback(filters);
+      const response = await mentorService.fetchMentorsWithFallback(
+        filters,
+        menteeProfile
+      );
       setMentors(response.mentors);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch mentors");
@@ -68,7 +83,7 @@ export const useMentors = ({
       setIsLoading(false);
     }
   }, [
-    menteeProfile.interests,
+    menteeProfile,
     debouncedSearchTerm,
     selectedExpertise,
     selectedExperience,

@@ -10,6 +10,9 @@ export interface Mentee {
   experienceLevel: string;
   educationLevel: string;
   jobRole: string;
+  industryId: number;
+  educationLevelId: number;
+  jobRoleId: number;
 }
 
 export interface Mentor {

@@ -1,4 +1,4 @@
-import type { Mentor } from "../App";
+import type { Mentor, Mentee } from "../App";
 
 export interface MentorFilters {
   search?: string;
@@ -6,6 +6,9 @@ export interface MentorFilters {
   experience?: string[];
   availability?: string[];
   interests?: string[]; // For personalized recommendations
+  industryId?: number;
+  jobRoleId?: number;
+  educationLevelId?: number;
 }
 
 export interface MentorResponse {
@@ -14,13 +17,62 @@ export interface MentorResponse {
   recommended?: Mentor[];
 }
 
+interface MentorSearchPayload {
+  mentee?: {
+    industryId: number | null;
+    jobRoleId: number | null;
+    educationLevelId: number | null;
+    experienceLevel: string;
+    interests: string[];
+    goals: string[];
+  };
+  filters: MentorFilters;
+}
+
+const normalizeMentor = (mentor: any): Mentor => {
+  return {
+    id: mentor.id?.toString() ?? "",
+    name: mentor.name ?? "",
+    title: mentor.title ?? "",
+    company: mentor.company ?? "",
+    expertise: Array.isArray(mentor.expertise) ? mentor.expertise : [],
+    experience: mentor.experience ?? "",
+    rating: typeof mentor.rating === "number" ? mentor.rating : 0,
+    reviewCount:
+      typeof mentor.reviewCount === "number" ? mentor.reviewCount : 0,
+    availability: mentor.availability ?? "",
+    location: mentor.location ?? "",
+    languages: Array.isArray(mentor.languages) ? mentor.languages : [],
+    bio: mentor.bio ?? "",
+    achievements: Array.isArray(mentor.achievements)
+      ? mentor.achievements
+      : [],
+    image: mentor.image ?? "",
+    industry: mentor.industry ?? "",
+    unavailableDateTime:
+      mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
+        ? mentor.unavailableDateTime
+        : {},
+    workingHours:
+      mentor.workingHours && typeof mentor.workingHours === "object"
+        ? mentor.workingHours
+        : undefined,
+    workingDays: Array.isArray(mentor.workingDays) ? mentor.workingDays : [],
+  };
+};
+
 class MentorService {
   private baseURL: string;
+  private matchingEndpoint: string;
 
   constructor() {
     // Use environment variable or default to localhost for development
     this.baseURL =
       import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+
+    this.matchingEndpoint =
+      import.meta.env.VITE_MATCHING_URL ||
+      "https://try-your-mentor-bff.onrender.com/matching";
   }
 
   /**
@@ -28,42 +80,33 @@ class MentorService {
    * @param filters - Optional filters to apply
    * @returns Promise containing mentors and metadata
    */
-  async fetchMentors(filters: MentorFilters = {}): Promise<MentorResponse> {
+  async fetchMentors(
+    filters: MentorFilters = {},
+    menteeProfile?: Mentee
+  ): Promise<MentorResponse> {
     try {
-      const queryParams = new URLSearchParams();
+      const payload: MentorSearchPayload = {
+        mentee: menteeProfile
+          ? {
+              industryId: menteeProfile.industryId ?? null,
+              jobRoleId: menteeProfile.jobRoleId ?? null,
+              educationLevelId: menteeProfile.educationLevelId ?? null,
+              experienceLevel: menteeProfile.experienceLevel,
+              interests: menteeProfile.interests,
+              goals: menteeProfile.goals,
+            }
+          : undefined,
+        filters,
+      };
 
-      // Add filters as query parameters
-      if (filters.search) {
-        queryParams.append("search", filters.search);
-      }
-
-      if (filters.expertise && filters.expertise.length > 0) {
-        queryParams.append("expertise", filters.expertise.join(","));
-      }
-
-      if (filters.experience && filters.experience.length > 0) {
-        queryParams.append("experience", filters.experience.join(","));
-      }
-
-      if (filters.availability && filters.availability.length > 0) {
-        queryParams.append("availability", filters.availability.join(","));
-      }
-
-      if (filters.interests && filters.interests.length > 0) {
-        queryParams.append("interests", filters.interests.join(","));
-      }
-
-      const url = `${this.baseURL}/mentors${
-        queryParams.toString() ? `?${queryParams.toString()}` : ""
-      }`;
-
-      const response = await fetch(url, {
-        method: "GET",
+      const response = await fetch(this.matchingEndpoint, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           // Add authentication headers if needed
           // 'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -71,7 +114,20 @@ class MentorService {
       }
 
       const data = await response.json();
-      return data;
+
+      const mentors = Array.isArray(data.mentors)
+        ? data.mentors.map(normalizeMentor)
+        : [];
+
+      const recommended = Array.isArray(data.recommended)
+        ? data.recommended.map(normalizeMentor)
+        : undefined;
+
+      return {
+        mentors,
+        total: data.total ?? mentors.length,
+        recommended,
+      };
     } catch (error) {
       console.error("Error fetching mentors:", error);
       throw error;
@@ -352,69 +408,10 @@ class MentorService {
    * Useful for development when backend is not available
    */
   async fetchMentorsWithFallback(
-    filters: MentorFilters = {}
+    filters: MentorFilters = {},
+    menteeProfile?: Mentee
   ): Promise<MentorResponse> {
-    try {
-      return await this.fetchMentors(filters);
-    } catch (error) {
-      console.warn("API call failed, using mock data:", error);
-
-      // Filter mock data client-side to simulate API behavior
-      const mockMentors = this.getMockMentors();
-      const filteredMentors = this.filterMentorsClientSide(
-        mockMentors,
-        filters
-      );
-
-      return {
-        mentors: filteredMentors,
-        total: filteredMentors.length,
-      };
-    }
-  }
-
-  /**
-   * Client-side filtering for mock data (simulates backend filtering)
-   */
-  private filterMentorsClientSide(
-    mentors: Mentor[],
-    filters: MentorFilters
-  ): Mentor[] {
-    return mentors.filter((mentor) => {
-      // Search filter
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        const matchesSearch =
-          mentor.name.toLowerCase().includes(searchTerm) ||
-          mentor.title.toLowerCase().includes(searchTerm) ||
-          mentor.company.toLowerCase().includes(searchTerm) ||
-          mentor.expertise.some((exp) =>
-            exp.toLowerCase().includes(searchTerm)
-          );
-
-        if (!matchesSearch) return false;
-      }
-
-      // Expertise filter
-      if (filters.expertise && filters.expertise.length > 0) {
-        const matchesExpertise = filters.expertise.some((exp) =>
-          mentor.expertise.includes(exp)
-        );
-        if (!matchesExpertise) return false;
-      }
-
-      // Experience filter
-      if (filters.experience && filters.experience.length > 0) {
-        if (!filters.experience.includes(mentor.experience)) return false;
-      }
-
-      // Availability filter
-      if (filters.availability && filters.availability.length > 0) {
-        if (!filters.availability.includes(mentor.availability)) return false;
-      }
-
-      return true;
-    });
+    return this.fetchMentors(filters, menteeProfile);
   }
 }
 
