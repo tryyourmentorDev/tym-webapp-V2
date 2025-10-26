@@ -70,13 +70,13 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const jobRolesMapping: Record<number, RankedOption[]> = {
     1: [
       { id: 1, label: "Intern Software Engineer" },
-      { id: 2, label: "Associate Software Engineer" },
-      { id: 3, label: "Software Engineer" },
-      { id: 4, label: "Senior Software Engineer" },
-      { id: 5, label: "Associate Technical Lead" },
-      { id: 6, label: "Technical Lead" },
-      { id: 7, label: "Senior Technical Lead" },
-      { id: 8, label: "Software Architect" },
+      { id: 11, label: "Associate Software Engineer" },
+      { id: 12, label: "Software Engineer" },
+      { id: 13, label: "Senior Software Engineer" },
+      { id: 14, label: "Associate Technical Lead" },
+      { id: 15, label: "Technical Lead" },
+      { id: 16, label: "Senior Technical Lead" },
+      { id: 17, label: "Software Architect" },
     ],
     2: [
       { id: 9, label: "Intern Quality Engineer" },

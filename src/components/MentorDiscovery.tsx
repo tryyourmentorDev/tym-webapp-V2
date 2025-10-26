@@ -15,7 +15,7 @@ import { useMentors } from "../hooks/useMentors";
 
 interface MentorDiscoveryProps {
   menteeProfile: Mentee;
-  onMentorSelect: (mentor: Mentor) => void;
+  onMentorSelect: (mentor: Mentor, similarMentors: Mentor[]) => void;
   onBackToHome: () => void;
 }
 
@@ -74,6 +74,13 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
     selectedExpertise.length +
     selectedExperience.length +
     selectedAvailability.length;
+
+  const handleMentorSelect = (mentor: Mentor) => {
+    const similarMentors = filteredMentors.filter(
+      (mentorItem) => mentorItem.id !== mentor.id
+    );
+    onMentorSelect(mentor, similarMentors);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -304,7 +311,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
                       <MentorCard
                         key={mentor.id}
                         mentor={mentor}
-                        onSelect={onMentorSelect}
+                        onSelect={handleMentorSelect}
                       />
                     ))}
                   </div>
@@ -325,7 +332,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({
                       <MentorCard
                         key={mentor.id}
                         mentor={mentor}
-                        onSelect={onMentorSelect}
+                        onSelect={handleMentorSelect}
                       />
                     ))}
                   </div>

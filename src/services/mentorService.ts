@@ -17,6 +17,76 @@ export interface MentorResponse {
   recommended?: Mentor[];
 }
 
+export interface MentorReview {
+  id: number;
+  name: string;
+  rating: number;
+  comment: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface MentorReviewResponse {
+  reviews: MentorReview[];
+  total: number;
+}
+
+export type MentorUnavailableDateTime = Record<
+  string,
+  "full-day" | string[]
+>;
+
+export interface MentorAvailability {
+  workingHours: {
+    start: string;
+    end: string;
+    timezone?: string;
+  } | null;
+  workingDays: number[];
+  unavailableDateTime: MentorUnavailableDateTime;
+}
+
+export interface MentorBookingPayload {
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  mentee?: {
+    educationQualificationId?: number | null;
+    currentJobRoleId?: number | null;
+    expectedJobRoleId?: number | null;
+    experienceLevel?: string | null;
+    experienceYears?: number | null;
+    interests?: string[];
+    goals?: string[];
+    city?: string;
+  };
+  booking: {
+    mentorId: string;
+    date: string;
+    time: string;
+    timezone: string;
+    city: string;
+    sessionExpectations?: string;
+    cv: {
+      fileName: string;
+      mimeType: string;
+      size: number;
+      base64: string;
+    };
+  };
+}
+
+export interface MentorBookingResponse {
+  bookingId: string;
+  mentorId: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  message?: string;
+}
+
 interface MentorSearchPayload {
   mentee?: {
     industryId: number | null;
@@ -42,7 +112,7 @@ const normalizeMentor = (mentor: any): Mentor => {
       typeof mentor.reviewCount === "number" ? mentor.reviewCount : 0,
     availability: mentor.availability ?? "",
     location: mentor.location ?? "",
-    languages: Array.isArray(mentor.languages) ? mentor.languages : [],
+    languages: Array.isArray(mentor.languages) ? mentor.languages : [mentor.languages],
     bio: mentor.bio ?? "",
     achievements: Array.isArray(mentor.achievements)
       ? mentor.achievements
@@ -68,7 +138,7 @@ class MentorService {
   constructor() {
     // Use environment variable or default to localhost for development
     this.baseURL =
-      import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
     this.matchingEndpoint =
       import.meta.env.VITE_MATCHING_URL ||
@@ -163,6 +233,117 @@ class MentorService {
         experience: [],
         availability: [],
       };
+    }
+  }
+
+  /**
+   * Fetch mentor reviews from backend
+   */
+  async getMentorReviews(mentorId: string): Promise<MentorReviewResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/mentor-reviews/${mentorId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        reviews: Array.isArray(data.reviews) ? data.reviews : [],
+        total: typeof data.total === "number" ? data.total : 0,
+      };
+    } catch (error) {
+      console.error(`Error fetching mentor reviews for ${mentorId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch mentor availability (working hours/days and unavailable slots)
+   */
+  async getMentorAvailability(mentorId: string): Promise<MentorAvailability> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/mentors/${mentorId}/availability`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        workingHours:
+          data.workingHours && data.workingHours.start && data.workingHours.end
+            ? {
+                start: data.workingHours.start,
+                end: data.workingHours.end,
+                timezone: data.workingHours.timezone ?? undefined,
+              }
+            : null,
+        workingDays: Array.isArray(data.workingDays) ? data.workingDays : [],
+        unavailableDateTime:
+          data.unavailableDateTime &&
+          typeof data.unavailableDateTime === "object"
+            ? data.unavailableDateTime
+            : {},
+      };
+    } catch (error) {
+      console.error(
+        `Error fetching mentor availability for ${mentorId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Submit a booking request for a mentor
+   */
+  async bookMentorSession(
+    mentorId: string,
+    payload: MentorBookingPayload
+  ): Promise<MentorBookingResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/mentors/${mentorId}/bookings`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const message =
+          errorBody?.message ||
+          `HTTP error! status: ${response.status}`;
+        throw new Error(message);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error booking mentor session for ${mentorId}:`, error);
+      throw error;
     }
   }
 
