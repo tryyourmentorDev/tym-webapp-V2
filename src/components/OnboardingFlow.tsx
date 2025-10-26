@@ -7,6 +7,11 @@ interface OnboardingFlowProps {
   onBackToHome: () => void;
 }
 
+interface RankedOption {
+  id: number;
+  label: string;
+}
+
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   onComplete,
   onBackToHome,
@@ -18,12 +23,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     experienceLevel: "",
     educationLevel: "",
     jobRole: "",
+    industryId: undefined,
+    educationLevelId: undefined,
+    jobRoleId: undefined,
   });
 
-  const expertiseOptions = [
-    "Software Engineering",
-    "Quality Engineering",
-    "Business Analysis",
+  const industryOptions: RankedOption[] = [
+    { id: 1, label: "Software Engineering" },
+    { id: 2, label: "Quality Engineering" },
+    { id: 3, label: "Business Analysis" },
   ];
 
   const goalOptions = [
@@ -50,53 +58,58 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     "Executive (11+ years)",
   ];
 
-  const educationLevels = [
-    "High School",
-    "Diploma",
-
-    "Bachelor's Degree",
-    "Master's Degree",
-    "Other",
+  const educationLevels: RankedOption[] = [
+    { id: 1, label: "High School" },
+    { id: 2, label: "Diploma" },
+    { id: 3, label: "Bachelor's Degree" },
+    { id: 4, label: "Master's Degree" },
+    { id: 5, label: "Other" },
   ];
 
-  // Job roles mapping based on expertise areas
-  const jobRolesMapping: { [key: string]: string[] } = {
-    "Software Engineering": [
-      "Intern Software Engineer",
-      "Associate Software Engineer",
-      "Software Engineer",
-      "Senior Software Engineer",
-      "Associate Technical Lead",
-      "Technical Lead",
-      "Senior Technical Lead",
-      "Software Architect",
+  // Job roles mapping based on selected industry
+  const jobRolesMapping: Record<number, RankedOption[]> = {
+    1: [
+      { id: 1, label: "Intern Software Engineer" },
+      { id: 11, label: "Associate Software Engineer" },
+      { id: 12, label: "Software Engineer" },
+      { id: 13, label: "Senior Software Engineer" },
+      { id: 14, label: "Associate Technical Lead" },
+      { id: 15, label: "Technical Lead" },
+      { id: 16, label: "Senior Technical Lead" },
+      { id: 17, label: "Software Architect" },
     ],
-    "Quality Engineering": [
-      "Intern Quality Engineer",
-      "Associate Quality Engineer",
-      "Quality Engineer",
-      "Senior Quality Engineer",
-      "Quality Lead",
-      "Senior Quality Lead",
-      "Software Architect",
+    2: [
+      { id: 9, label: "Intern Quality Engineer" },
+      { id: 10, label: "Associate Quality Engineer" },
+      { id: 11, label: "Quality Engineer" },
+      { id: 12, label: "Senior Quality Engineer" },
+      { id: 13, label: "Quality Lead" },
+      { id: 14, label: "Senior Quality Lead" },
+      { id: 15, label: "Software Architect" },
     ],
-    "Business Analysis": [
-      "Business Analyst Intern",
-      "Junior Business Analyst",
-      "Business Analyst",
-      "Senior Business Analyst",
-      "Lead Business Analyst",
+    3: [
+      { id: 16, label: "Business Analyst Intern" },
+      { id: 17, label: "Junior Business Analyst" },
+      { id: 18, label: "Business Analyst" },
+      { id: 19, label: "Senior Business Analyst" },
+      { id: 20, label: "Lead Business Analyst" },
     ],
   };
 
-  // Get job roles for selected expertise
-  const getJobRolesForExpertise = (): string[] => {
-    const selectedExpertise = formData.interests?.[0];
-    return selectedExpertise ? jobRolesMapping[selectedExpertise] || [] : [];
+  // Get job roles for selected industry
+  const getJobRolesForIndustry = (): RankedOption[] => {
+    const selectedIndustryId = formData.industryId;
+    return selectedIndustryId ? jobRolesMapping[selectedIndustryId] || [] : [];
   };
 
-  const handleInterestSelect = (interest: string) => {
-    setFormData({ ...formData, interests: [interest], jobRole: "" });
+  const handleInterestSelect = (industry: RankedOption) => {
+    setFormData({
+      ...formData,
+      interests: [industry.label],
+      industryId: industry.id,
+      jobRole: "",
+      jobRoleId: undefined,
+    });
   };
 
   const handleGoalToggle = (goal: string) => {
@@ -110,14 +123,17 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return (formData.interests?.length || 0) >= 1;
+        return formData.industryId !== undefined;
       case 2:
         return (formData.goals?.length || 0) >= 1;
       case 3:
         return (
           formData.experienceLevel &&
           formData.educationLevel &&
-          formData.jobRole
+          formData.educationLevelId !== undefined &&
+          formData.industryId !== undefined &&
+          formData.jobRole &&
+          formData.jobRoleId !== undefined
         );
       default:
         return false;
@@ -189,19 +205,19 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {expertiseOptions.map((interest) => {
-                  const isSelected = formData.interests?.includes(interest);
+                {industryOptions.map((industry) => {
+                  const isSelected = formData.industryId === industry.id;
                   return (
                     <button
-                      key={interest}
-                      onClick={() => handleInterestSelect(interest)}
+                      key={industry.id}
+                      onClick={() => handleInterestSelect(industry)}
                       className={`p-4 rounded-xl text-left transition-all ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-md transform scale-105"
                           : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                       }`}
                     >
-                      <span className="font-medium">{interest}</span>
+                      <span className="font-medium">{industry.label}</span>
                     </button>
                   );
                 })}
@@ -273,20 +289,21 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {educationLevels.map((education) => (
                       <button
-                        key={education}
+                        key={education.id}
                         onClick={() =>
                           setFormData({
                             ...formData,
-                            educationLevel: education,
+                            educationLevel: education.label,
+                            educationLevelId: education.id,
                           })
                         }
                         className={`p-4 rounded-xl text-left transition-all ${
-                          formData.educationLevel === education
+                          formData.educationLevelId === education.id
                             ? "bg-purple-600 text-white shadow-md"
                             : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                         }`}
                       >
-                        <span className="font-medium">{education}</span>
+                        <span className="font-medium">{education.label}</span>
                       </button>
                     ))}
                   </div>
@@ -323,26 +340,30 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                       What is your current or target job role?
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {getJobRolesForExpertise().map((role) => (
+                      {getJobRolesForIndustry().map((role) => (
                         <button
-                          key={role}
+                          key={role.id}
                           onClick={() =>
-                            setFormData({ ...formData, jobRole: role })
+                            setFormData({
+                              ...formData,
+                              jobRole: role.label,
+                              jobRoleId: role.id,
+                            })
                           }
                           className={`p-4 rounded-xl text-left transition-all ${
-                            formData.jobRole === role
+                            formData.jobRoleId === role.id
                               ? "bg-indigo-600 text-white shadow-md"
                               : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                           }`}
                         >
-                          <span className="font-medium">{role}</span>
+                          <span className="font-medium">{role.label}</span>
                         </button>
                       ))}
                     </div>
-                    {getJobRolesForExpertise().length === 0 && (
+                    {getJobRolesForIndustry().length === 0 && (
                       <p className="text-gray-500 text-sm">
-                        Please select an area of expertise first to see
-                        available job roles.
+                        Please select an industry first to see available job
+                        roles.
                       </p>
                     )}
                   </div>

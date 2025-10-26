@@ -10,6 +10,9 @@ export interface Mentee {
   experienceLevel: string;
   educationLevel: string;
   jobRole: string;
+  industryId: number;
+  educationLevelId: number;
+  jobRoleId: number;
 }
 
 export interface Mentor {
@@ -46,6 +49,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>("landing");
   const [menteeProfile, setMenteeProfile] = useState<Mentee | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
+  const [similarMentors, setSimilarMentors] = useState<Mentor[]>([]);
 
   // Initialize from URL on page load
   useEffect(() => {
@@ -71,10 +75,14 @@ function App() {
       // Only allow direct access to profile if we have both mentee and mentor data
       const savedProfile = sessionStorage.getItem("menteeProfile");
       const savedMentor = sessionStorage.getItem("selectedMentor");
+      const savedSimilar = sessionStorage.getItem("similarMentors");
       if (savedProfile && savedMentor) {
         try {
           setMenteeProfile(JSON.parse(savedProfile));
           setSelectedMentor(JSON.parse(savedMentor));
+          setSimilarMentors(
+            savedSimilar ? JSON.parse(savedSimilar) : []
+          );
           initialStep = "profile";
         } catch {
           initialStep = "landing";
@@ -112,14 +120,20 @@ function App() {
         if (state.step === "landing") {
           setMenteeProfile(null);
           setSelectedMentor(null);
+          setSimilarMentors([]);
         } else if (state.step === "discovery") {
           setSelectedMentor(null);
+          setSimilarMentors([]);
+        } else if (state.step === "profile") {
+          const savedSimilar = sessionStorage.getItem("similarMentors");
+          setSimilarMentors(savedSimilar ? JSON.parse(savedSimilar) : []);
         }
       } else {
         // No state, go to landing
         setCurrentStep("landing");
         setMenteeProfile(null);
         setSelectedMentor(null);
+        setSimilarMentors([]);
       }
     };
 
@@ -188,22 +202,40 @@ function App() {
     navigateToStep("discovery");
   };
 
-  const handleMentorSelect = (mentor: Mentor) => {
+  const setProfileSelection = (mentor: Mentor, similar: Mentor[]) => {
     setSelectedMentor(mentor);
+    setSimilarMentors(similar);
     sessionStorage.setItem("selectedMentor", JSON.stringify(mentor));
+    sessionStorage.setItem("similarMentors", JSON.stringify(similar));
+  };
+
+  const handleMentorSelect = (mentor: Mentor, similar: Mentor[]) => {
+    setProfileSelection(mentor, similar);
     navigateToStep("profile");
+  };
+
+  const handleSimilarMentorSelect = (mentor: Mentor) => {
+    const allMentors = selectedMentor
+      ? [selectedMentor, ...similarMentors]
+      : similarMentors;
+    const updatedSimilar = allMentors.filter((item) => item.id !== mentor.id);
+    setProfileSelection(mentor, updatedSimilar);
   };
 
   const handleBackToDiscovery = () => {
     setSelectedMentor(null);
+    setSimilarMentors([]);
+    sessionStorage.removeItem("similarMentors");
     navigateToStep("discovery");
   };
 
   const handleBackToHome = () => {
     setMenteeProfile(null);
     setSelectedMentor(null);
+    setSimilarMentors([]);
     sessionStorage.removeItem("menteeProfile");
     sessionStorage.removeItem("selectedMentor");
+    sessionStorage.removeItem("similarMentors");
     navigateToStep("landing");
   };
 
@@ -231,8 +263,11 @@ function App() {
       {currentStep === "profile" && selectedMentor && (
         <MentorProfile
           mentor={selectedMentor}
+          similarMentors={similarMentors}
+          onSimilarMentorSelect={handleSimilarMentorSelect}
           onBack={handleBackToDiscovery}
           onBackToHome={handleBackToHome}
+          menteeProfile={menteeProfile}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Star,
@@ -9,38 +9,154 @@ import {
   Calendar,
   Heart,
   Share,
+  Loader2,
 } from "lucide-react";
-import type { Mentor } from "../App";
+import type { Mentor, Mentee } from "../App";
+import {
+  mentorService,
+  type MentorReview,
+  type MentorUnavailableDateTime,
+} from "../services/mentorService";
+
+const defaultWorkingHours = {
+  start: "09:00",
+  end: "18:00",
+  timezone: "UTC",
+};
+
+type BookingFormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  city: string;
+  sessionExpectations: string;
+  selectedDate: string;
+  selectedTime: string;
+  cv: File | null;
+};
+
+const createEmptyBookingForm = (): BookingFormState => ({
+  firstName: "",
+  lastName: "",
+  email: "",
+  city: "",
+  sessionExpectations: "",
+  selectedDate: "",
+  selectedTime: "",
+  cv: null,
+});
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+const extractExperienceYears = (experienceLevel?: string | null): number | null => {
+  if (!experienceLevel) return null;
+  const match = experienceLevel.match(/\d+/);
+  if (!match) return null;
+  const parsed = parseInt(match[0], 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 interface MentorProfileProps {
   mentor: Mentor;
+  similarMentors: Mentor[];
+  onSimilarMentorSelect: (mentor: Mentor) => void;
   onBack: () => void;
   onBackToHome: () => void;
+  menteeProfile: Mentee | null;
 }
 
 export const MentorProfile: React.FC<MentorProfileProps> = ({
   mentor,
+  similarMentors,
+  onSimilarMentorSelect,
   onBack,
   onBackToHome,
+  menteeProfile,
 }) => {
   const [showContactForm, setShowContactForm] = useState(false);
   const [message, setMessage] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingForm, setBookingForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    city: "",
-    sessionExpectations: "",
-    selectedDate: "",
-    selectedTime: "",
-    cv: null as File | null,
+  const [bookingForm, setBookingForm] = useState<BookingFormState>(() =>
+    createEmptyBookingForm()
+  );
+  const [reviews, setReviews] = useState<MentorReview[]>([]);
+  const [isReviewsLoading, setIsReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [workingHours, setWorkingHours] = useState(() => {
+    if (mentor.workingHours?.start && mentor.workingHours?.end) {
+      return {
+        start: mentor.workingHours.start,
+        end: mentor.workingHours.end,
+        timezone: mentor.workingHours.timezone ?? defaultWorkingHours.timezone,
+      };
+    }
+    return defaultWorkingHours;
   });
+  const [workingDays, setWorkingDays] = useState<number[]>(
+    mentor.workingDays && mentor.workingDays.length > 0
+      ? mentor.workingDays
+      : [1, 2, 3, 4, 5]
+  );
+  const [unavailableDateTime, setUnavailableDateTime] =
+    useState<MentorUnavailableDateTime>(
+      mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
+        ? mentor.unavailableDateTime
+        : {}
+    );
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
-  // Get mentor-specific availability data
-  const unavailableDateTime = mentor.unavailableDateTime || {};
-  const workingHours = mentor.workingHours || { start: "09:00", end: "18:00" };
-  const workingDays = mentor.workingDays || [1, 2, 3, 4, 5]; // Default to weekdays
+  const resetBookingForm = () => {
+    setBookingForm(createEmptyBookingForm());
+    setFileInputKey((prev) => prev + 1);
+  };
+
+  const fetchAvailability = async () => {
+    setAvailabilityError(null);
+    setIsAvailabilityLoading(true);
+    try {
+      const availability = await mentorService.getMentorAvailability(mentor.id);
+      setWorkingHours(
+        availability.workingHours
+          ? {
+              start: availability.workingHours.start,
+              end: availability.workingHours.end,
+              timezone:
+                availability.workingHours.timezone ??
+                defaultWorkingHours.timezone,
+            }
+          : defaultWorkingHours
+      );
+      setWorkingDays(
+        availability.workingDays.length > 0
+          ? availability.workingDays
+          : [1, 2, 3, 4, 5]
+      );
+      setUnavailableDateTime(availability.unavailableDateTime);
+    } catch (error) {
+      setAvailabilityError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load availability for this mentor."
+      );
+    } finally {
+      setIsAvailabilityLoading(false);
+    }
+  };
 
   const handleSendMessage = () => {
     // In a real app, this would send the message
@@ -49,7 +165,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     setMessage("");
   };
 
-  const handleBookingSubmit = () => {
+  const handleBookingSubmit = async () => {
     // Validate required fields
     if (
       !bookingForm.firstName ||
@@ -64,23 +180,83 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       return;
     }
 
-    // In a real app, this would make an API call to book the session
-    alert(
-      `Session booked with ${mentor.name} on ${bookingForm.selectedDate} at ${bookingForm.selectedTime}!`
-    );
+    setBookingError(null);
+    setBookingSuccess(null);
 
-    // Reset form and close modal
-    setBookingForm({
-      firstName: "",
-      lastName: "",
-      email: "",
-      city: "",
-      sessionExpectations: "",
-      selectedDate: "",
-      selectedTime: "",
-      cv: null,
-    });
-    setShowBookingModal(false);
+    const cvFile = bookingForm.cv;
+    if (!cvFile) {
+      setBookingError("CV/Resume upload is required.");
+      return;
+    }
+
+    setIsBookingLoading(true);
+    try {
+      const cvBase64 = await fileToBase64(cvFile);
+      const timezone =
+        workingHours.timezone ??
+        Intl.DateTimeFormat().resolvedOptions().timeZone ??
+        defaultWorkingHours.timezone;
+      const menteeDetails = menteeProfile
+        ? {
+            educationQualificationId: menteeProfile.educationLevelId ?? null,
+            currentJobRoleId: menteeProfile.jobRoleId ?? null,
+            expectedJobRoleId: menteeProfile.jobRoleId ?? null,
+            experienceLevel: menteeProfile.experienceLevel ?? null,
+            experienceYears: extractExperienceYears(
+              menteeProfile.experienceLevel
+            ),
+            interests: menteeProfile.interests ?? [],
+            goals: menteeProfile.goals ?? [],
+            city: bookingForm.city.trim() || undefined,
+          }
+        : {
+            city: bookingForm.city.trim() || undefined,
+          };
+
+      const payload = {
+        user: {
+          firstName: bookingForm.firstName.trim(),
+          lastName: bookingForm.lastName.trim(),
+          email: bookingForm.email.trim(),
+        },
+        mentee: menteeDetails,
+        booking: {
+          mentorId: mentor.id,
+          date: bookingForm.selectedDate,
+          time: bookingForm.selectedTime,
+          timezone,
+          city: bookingForm.city.trim(),
+          sessionExpectations:
+            bookingForm.sessionExpectations.trim() || undefined,
+          cv: {
+            fileName: cvFile.name,
+            mimeType: cvFile.type,
+            size: cvFile.size,
+            base64: cvBase64,
+          },
+        },
+      };
+
+      const response = await mentorService.bookMentorSession(
+        mentor.id,
+        payload
+      );
+
+      setBookingSuccess(
+        response.message ??
+          "Session booked successfully! We'll reach out with next steps."
+      );
+      resetBookingForm();
+      await fetchAvailability();
+    } catch (error) {
+      setBookingError(
+        error instanceof Error
+          ? error.message
+          : "Failed to book the session. Please try again."
+      );
+    } finally {
+      setIsBookingLoading(false);
+    }
   };
 
   const updateBookingForm = (field: string, value: string | File | null) => {
@@ -119,6 +295,40 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       updateBookingForm("cv", null);
     }
   };
+
+  useEffect(() => {
+    let isSubscribed = true;
+
+    const loadReviews = async () => {
+      setIsReviewsLoading(true);
+      setReviewsError(null);
+      setReviews([]);
+      try {
+        const response = await mentorService.getMentorReviews(mentor.id);
+        if (isSubscribed) {
+          setReviews(response.reviews);
+        }
+      } catch (error) {
+        if (isSubscribed) {
+          setReviewsError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load mentor reviews"
+          );
+        }
+      } finally {
+        if (isSubscribed) {
+          setIsReviewsLoading(false);
+        }
+      }
+    };
+
+    loadReviews();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [mentor.id]);
 
   const getMinDate = (): string => {
     const today = new Date();
@@ -161,7 +371,12 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   };
 
   const getAvailableTimes = (selectedDate: string): string[] => {
-    if (!selectedDate || !isDateAvailable(selectedDate)) return [];
+    if (
+      !selectedDate ||
+      !isDateAvailable(selectedDate) ||
+      isAvailabilityLoading
+    )
+      return [];
 
     const allTimes = generateTimeSlots();
     const dateAvailability = unavailableDateTime[selectedDate];
@@ -174,6 +389,23 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       ? dateAvailability
       : [];
     return allTimes.filter((time) => !unavailableForDate.includes(time));
+  };
+
+  const handleOpenBookingModal = () => {
+    setShowBookingModal(true);
+    setBookingSuccess(null);
+    setBookingError(null);
+    resetBookingForm();
+    void fetchAvailability();
+  };
+
+  const handleCloseBookingModal = () => {
+    setShowBookingModal(false);
+    setBookingSuccess(null);
+    setBookingError(null);
+    setIsBookingLoading(false);
+    resetBookingForm();
+    setAvailabilityError(null);
   };
 
   return (
@@ -275,7 +507,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                   Send Message
                 </button>
                 <button
-                  onClick={() => setShowBookingModal(true)}
+                  onClick={handleOpenBookingModal}
                   className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
                 >
                   <Calendar className="w-5 h-5 mr-2" />
@@ -332,67 +564,62 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 Recent Reviews
               </h2>
-              <div className="space-y-6">
-                {[
-                  {
-                    name: "Alex Thompson",
-                    role: "Software Engineer",
-                    rating: 5,
-                    comment:
-                      "Incredible mentor! Helped me transition from junior to senior engineer in just 8 months.",
-                    date: "2 weeks ago",
-                  },
-                  {
-                    name: "Jessica Liu",
-                    role: "Product Manager",
-                    rating: 5,
-                    comment:
-                      "Amazing guidance on product strategy. Very knowledgeable and patient.",
-                    date: "1 month ago",
-                  },
-                  {
-                    name: "Michael Chen",
-                    role: "Data Scientist",
-                    rating: 4,
-                    comment:
-                      "Great insights into machine learning and career development. Highly recommend!",
-                    date: "2 months ago",
-                  },
-                ].map((review, index) => (
-                  <div
-                    key={index}
-                    className="border-b border-gray-200 last:border-b-0 pb-6 last:pb-0"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">
-                          {review.name}
-                        </h4>
-                        <p className="text-sm text-gray-600">{review.role}</p>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < review.rating
-                                  ? "text-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                              fill="currentColor"
-                            />
-                          ))}
+              {isReviewsLoading ? (
+                <div className="flex items-center text-gray-600">
+                  <Loader2 className="w-5 h-5 animate-spin mr-3" />
+                  <span>Loading reviews...</span>
+                </div>
+              ) : reviewsError ? (
+                <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                  Failed to load reviews. {reviewsError}
+                </div>
+              ) : reviews.length > 0 ? (
+                <div className="space-y-6">
+                  {reviews.map((review) => {
+                    const normalizedRating = Math.max(
+                      0,
+                      Math.min(5, Math.round(review.rating ?? 0))
+                    );
+                    return (
+                      <div
+                        key={review.id}
+                        className="border-b border-gray-200 last:border-b-0 pb-6 last:pb-0"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {review.name}
+                            </h4>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="flex">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < normalizedRating
+                                      ? "text-yellow-400"
+                                      : "text-gray-300"
+                                  }`}
+                                  fill="currentColor"
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-gray-500 ml-2">
+                              {review.date}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm text-gray-500 ml-2">
-                          {review.date}
-                        </span>
+                        <p className="text-gray-700 whitespace-pre-line">
+                          {review.comment}
+                        </p>
                       </div>
-                    </div>
-                    <p className="text-gray-700">{review.comment}</p>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-600">No reviews yet.</p>
+              )}
             </div>
           </div>
 
@@ -434,46 +661,45 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 Similar Mentors
               </h3>
-              <div className="space-y-4">
-                {[
-                  {
-                    name: "John Smith",
-                    title: "Senior Engineer at Meta",
-                    rating: 4.8,
-                  },
-                  {
-                    name: "Lisa Wang",
-                    title: "Tech Lead at Amazon",
-                    rating: 4.9,
-                  },
-                  {
-                    name: "Carlos Rodriguez",
-                    title: "Principal Engineer at Tesla",
-                    rating: 4.7,
-                  },
-                ].map((similar, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  >
-                    <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">
-                        {similar.name}
-                      </p>
-                      <p className="text-gray-600 text-xs truncate">
-                        {similar.title}
-                      </p>
-                    </div>
-                    <div className="flex items-center">
-                      <Star className="w-3 h-3 text-yellow-400 mr-1" />
-                      <span className="text-xs text-gray-600">
-                        {similar.rating}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {similarMentors.length > 0 ? (
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+                  {similarMentors.map((similar) => (
+                    <button
+                      type="button"
+                      key={similar.id}
+                      onClick={() => onSimilarMentorSelect(similar)}
+                      className="w-full flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
+                      aria-label={`View profile for ${similar.name}`}
+                    >
+                      <img
+                        src={similar.image}
+                        alt={similar.name}
+                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {similar.name}
+                        </p>
+                        <p className="text-gray-600 text-xs truncate">
+                          {similar.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <Star className="w-3 h-3 text-yellow-400 mr-1" />
+                        <span className="text-xs text-gray-600">
+                          {Number.isFinite(similar.rating)
+                            ? similar.rating.toFixed(1)
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  No similar mentors to display right now.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -519,6 +745,16 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Book a Session with {mentor.name}
               </h3>
+              {bookingSuccess && (
+                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  {bookingSuccess}
+                </div>
+              )}
+              {bookingError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {bookingError}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Personal Information */}
@@ -587,17 +823,18 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Upload CV/Resume *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        onChange={handleCVUpload}
-                        accept=".pdf,.doc,.docx"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Upload CV/Resume *
+                  </label>
+                  <div className="relative">
+                    <input
+                      key={fileInputKey}
+                      type="file"
+                      onChange={handleCVUpload}
+                      accept=".pdf,.doc,.docx"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
                       {bookingForm.cv && (
                         <p className="text-sm text-green-600 mt-1">
                           ✓ {bookingForm.cv.name} uploaded successfully
@@ -629,6 +866,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                       min={getMinDate()}
                       max={getMaxDate()}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isAvailabilityLoading}
                     />
                   </div>
 
@@ -642,6 +880,11 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                         updateBookingForm("selectedTime", e.target.value)
                       }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={
+                        isAvailabilityLoading ||
+                        !bookingForm.selectedDate ||
+                        availabilityError !== null
+                      }
                     >
                       <option value="">Select a time</option>
                       {getAvailableTimes(bookingForm.selectedDate).map(
@@ -652,6 +895,25 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                         )
                       )}
                     </select>
+                    {isAvailabilityLoading && (
+                      <p className="text-sm text-gray-500 mt-1 flex items-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Loading availability...
+                      </p>
+                    )}
+                    {availabilityError && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {availabilityError}
+                      </p>
+                    )}
+                    {!isAvailabilityLoading &&
+                      !availabilityError &&
+                      bookingForm.selectedDate &&
+                      getAvailableTimes(bookingForm.selectedDate).length === 0 && (
+                        <p className="text-sm text-orange-600 mt-1">
+                          No times available on this date. Please choose another day.
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>
@@ -682,14 +944,22 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     !bookingForm.city ||
                     !bookingForm.selectedDate ||
                     !bookingForm.selectedTime ||
-                    !bookingForm.cv
+                    !bookingForm.cv ||
+                    isBookingLoading
                   }
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center"
                 >
-                  Book Session
+                  {isBookingLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    "Book Session"
+                  )}
                 </button>
                 <button
-                  onClick={() => setShowBookingModal(false)}
+                  onClick={handleCloseBookingModal}
                   className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
                 >
                   Cancel
