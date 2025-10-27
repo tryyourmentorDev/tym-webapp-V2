@@ -138,7 +138,7 @@ class MentorService {
   constructor() {
     // Use environment variable or default to localhost for development
     this.baseURL =
-      import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+      import.meta.env.VITE_API_BASE_URL || "https://try-your-mentor-bff.onrender.com";
 
     this.matchingEndpoint =
       import.meta.env.VITE_MATCHING_URL ||
