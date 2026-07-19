@@ -46,17 +46,19 @@ const createEmptyBookingForm = (): BookingFormState => ({
   cv: null,
 });
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1] ?? "";
-      resolve(base64);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+// CV-UPLOAD (temporarily disabled — restore with the file input in the booking
+// form and the `cv` field on the booking payload):
+// const fileToBase64 = (file: File): Promise<string> =>
+//   new Promise((resolve, reject) => {
+//     const reader = new FileReader();
+//     reader.onload = () => {
+//       const result = reader.result as string;
+//       const base64 = result.split(",")[1] ?? "";
+//       resolve(base64);
+//     };
+//     reader.onerror = () => reject(reader.error);
+//     reader.readAsDataURL(file);
+//   });
 
 const extractExperienceYears = (experienceLevel?: string | null): number | null => {
   if (!experienceLevel) return null;
@@ -118,11 +120,12 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   const [isBookingLoading, setIsBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
+  // CV-UPLOAD (disabled): fileInputKey resets the <input type="file"> after a
+  // booking — restore alongside the CV field.
+  // const [fileInputKey, setFileInputKey] = useState(0);
 
   const resetBookingForm = () => {
     setBookingForm(createEmptyBookingForm());
-    setFileInputKey((prev) => prev + 1);
   };
 
   const fetchAvailability = async () => {
@@ -166,32 +169,25 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   };
 
   const handleBookingSubmit = async () => {
-    // Validate required fields
+    // Validate required fields. CV upload is intentionally disabled for now
+    // (will return later — see the commented-out block below and handleCVUpload).
     if (
       !bookingForm.firstName ||
       !bookingForm.lastName ||
       !bookingForm.email ||
       !bookingForm.city ||
       !bookingForm.selectedDate ||
-      !bookingForm.selectedTime ||
-      !bookingForm.cv
+      !bookingForm.selectedTime
     ) {
-      alert("Please fill in all required fields including uploading your CV");
+      alert("Please fill in all required fields");
       return;
     }
 
     setBookingError(null);
     setBookingSuccess(null);
 
-    const cvFile = bookingForm.cv;
-    if (!cvFile) {
-      setBookingError("CV/Resume upload is required.");
-      return;
-    }
-
     setIsBookingLoading(true);
     try {
-      const cvBase64 = await fileToBase64(cvFile);
       const timezone =
         workingHours.timezone ??
         Intl.DateTimeFormat().resolvedOptions().timeZone ??
@@ -228,12 +224,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           city: bookingForm.city.trim(),
           sessionExpectations:
             bookingForm.sessionExpectations.trim() || undefined,
-          cv: {
-            fileName: cvFile.name,
-            mimeType: cvFile.type,
-            size: cvFile.size,
-            base64: cvBase64,
-          },
+          // CV upload disabled for now; re-add `cv: { ... }` here when restoring.
         },
       };
 
@@ -266,35 +257,31 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     }));
   };
 
-  const handleCVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type (PDF, DOC, DOCX)
-      const allowedTypes = [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ];
-
-      if (!allowedTypes.includes(file.type)) {
-        alert("Please upload a PDF, DOC, or DOCX file");
-        event.target.value = ""; // Reset file input
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (file.size > maxSize) {
-        alert("File size should be less than 5MB");
-        event.target.value = ""; // Reset file input
-        return;
-      }
-
-      updateBookingForm("cv", file);
-    } else {
-      updateBookingForm("cv", null);
-    }
-  };
+  // CV-UPLOAD (temporarily disabled — restore with the file input in the form):
+  // const handleCVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     const allowedTypes = [
+  //       "application/pdf",
+  //       "application/msword",
+  //       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  //     ];
+  //     if (!allowedTypes.includes(file.type)) {
+  //       alert("Please upload a PDF, DOC, or DOCX file");
+  //       event.target.value = "";
+  //       return;
+  //     }
+  //     const maxSize = 5 * 1024 * 1024; // 5MB
+  //     if (file.size > maxSize) {
+  //       alert("File size should be less than 5MB");
+  //       event.target.value = "";
+  //       return;
+  //     }
+  //     updateBookingForm("cv", file);
+  //   } else {
+  //     updateBookingForm("cv", null);
+  //   }
+  // };
 
   useEffect(() => {
     let isSubscribed = true;
@@ -823,28 +810,11 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     />
                   </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Upload CV/Resume *
-                  </label>
-                  <div className="relative">
-                    <input
-                      key={fileInputKey}
-                      type="file"
-                      onChange={handleCVUpload}
-                      accept=".pdf,.doc,.docx"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                      {bookingForm.cv && (
-                        <p className="text-sm text-green-600 mt-1">
-                          ✓ {bookingForm.cv.name} uploaded successfully
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Accepted formats: PDF, DOC, DOCX (Max 5MB)
-                      </p>
-                    </div>
-                  </div>
+                {/* CV/Resume upload removed for now — will return later. To
+                    restore: re-add an <input type="file" onChange={handleCVUpload}
+                    key={fileInputKey}> block here, and un-comment fileToBase64,
+                    handleCVUpload, the fileInputKey state, the required-field
+                    check, and the payload's `cv` field. */}
                 </div>
 
                 {/* Session Details */}
@@ -944,7 +914,6 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     !bookingForm.city ||
                     !bookingForm.selectedDate ||
                     !bookingForm.selectedTime ||
-                    !bookingForm.cv ||
                     isBookingLoading
                   }
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center"
