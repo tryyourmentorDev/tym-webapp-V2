@@ -78,7 +78,6 @@ export interface MentorBookingPayload {
     timezone: string;
     city: string;
     sessionExpectations?: string;
-    // CV upload is disabled for now (kept optional so it can be re-added later).
     cv?: {
       fileName: string;
       mimeType: string;
