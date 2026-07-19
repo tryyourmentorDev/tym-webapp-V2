@@ -205,6 +205,31 @@ class MentorService {
   }
 
   /**
+   * Get all industries from the backend. Used by onboarding's "areas of
+   * expertise" step, which despite its wording actually selects an industry
+   * (drives industryId for job-role filtering and mentor matching).
+   */
+  async getIndustries(): Promise<{ id: number; name: string }[]> {
+    try {
+      const response = await fetch(`${this.baseURL}/industries`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching industries:", error);
+      return [];
+    }
+  }
+
+  /**
    * Get available filter options from the backend
    */
   async getFilterOptions(): Promise<{

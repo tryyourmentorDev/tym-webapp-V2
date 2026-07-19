@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
 import type { Mentee } from "../App";
+import { mentorService } from "../services/mentorService";
 
 interface OnboardingFlowProps {
   onComplete: (profile: Mentee) => void;
@@ -28,11 +29,29 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     jobRoleId: undefined,
   });
 
-  const industryOptions: RankedOption[] = [
-    { id: 1, label: "Software Engineering" },
-    { id: 2, label: "Quality Engineering" },
-    { id: 3, label: "Business Analysis" },
-  ];
+  const [industryOptions, setIndustryOptions] = useState<RankedOption[]>([]);
+  const [industriesLoading, setIndustriesLoading] = useState(true);
+  const [industriesError, setIndustriesError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadIndustries = async () => {
+      setIndustriesLoading(true);
+      const industries = await mentorService.getIndustries();
+      if (cancelled) return;
+      setIndustryOptions(
+        industries.map((industry) => ({ id: industry.id, label: industry.name }))
+      );
+      setIndustriesError(industries.length === 0);
+      setIndustriesLoading(false);
+    };
+
+    loadIndustries();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const goalOptions = [
     "Find a job",
@@ -204,24 +223,36 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 Select the field where you'd like to learn and grow the most.
               </p>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {industryOptions.map((industry) => {
-                  const isSelected = formData.industryId === industry.id;
-                  return (
-                    <button
-                      key={industry.id}
-                      onClick={() => handleInterestSelect(industry)}
-                      className={`p-4 rounded-xl text-left transition-all ${
-                        isSelected
-                          ? "bg-blue-600 text-white shadow-md transform scale-105"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <span className="font-medium">{industry.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {industriesLoading && (
+                <div className="text-sm text-gray-500">Loading options…</div>
+              )}
+
+              {!industriesLoading && industriesError && (
+                <div className="text-sm text-red-500">
+                  Couldn't load areas of expertise. Please refresh the page.
+                </div>
+              )}
+
+              {!industriesLoading && !industriesError && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {industryOptions.map((industry) => {
+                    const isSelected = formData.industryId === industry.id;
+                    return (
+                      <button
+                        key={industry.id}
+                        onClick={() => handleInterestSelect(industry)}
+                        className={`p-4 rounded-xl text-left transition-all ${
+                          isSelected
+                            ? "bg-blue-600 text-white shadow-md transform scale-105"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        <span className="font-medium">{industry.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {(formData.interests?.length || 0) > 0 && (
                 <div className="mt-6 text-sm text-gray-600">
