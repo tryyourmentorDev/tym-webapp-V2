@@ -125,22 +125,41 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     setFileInputKey((key) => key + 1);
   };
 
-  const fetchAvailability = async () => {
+  // Fetches this mentor's available slots for whichever date is currently
+  // selected in the booking form — re-runs every time the mentee picks a new
+  // date, rather than fetching every future slot upfront.
+  useEffect(() => {
+    if (!showBookingModal || !bookingForm.selectedDate) {
+      setSlots([]);
+      return;
+    }
+
+    let cancelled = false;
     setAvailabilityError(null);
     setIsAvailabilityLoading(true);
-    try {
-      const freeSlots = await mentorService.getMentorSlots(mentor.id);
-      setSlots(freeSlots);
-    } catch (error) {
-      setAvailabilityError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load availability for this mentor."
-      );
-    } finally {
-      setIsAvailabilityLoading(false);
-    }
-  };
+
+    mentorService
+      .getMentorSlots(mentor.id, bookingForm.selectedDate)
+      .then((daySlots) => {
+        if (!cancelled) setSlots(daySlots);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAvailabilityError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load availability for this date."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsAvailabilityLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showBookingModal, bookingForm.selectedDate, mentor.id]);
 
   const handleSendMessage = () => {
     // In a real app, this would send the message
@@ -223,7 +242,6 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           "Session booked successfully! We'll reach out with next steps."
       );
       resetBookingForm();
-      await fetchAvailability();
     } catch (error) {
       setBookingError(
         error instanceof Error
@@ -331,7 +349,6 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     setBookingSuccess(null);
     setBookingError(null);
     resetBookingForm();
-    void fetchAvailability();
   };
 
   const handleCloseBookingModal = () => {
@@ -792,9 +809,15 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     <input
                       type="date"
                       value={bookingForm.selectedDate}
-                      onChange={(e) =>
-                        updateBookingForm("selectedDate", e.target.value)
-                      }
+                      onChange={(e) => {
+                        // Changing the date invalidates whatever time was
+                        // picked for the previous date's slot list.
+                        setBookingForm((prev) => ({
+                          ...prev,
+                          selectedDate: e.target.value,
+                          selectedTime: "",
+                        }));
+                      }}
                       min={getMinDate()}
                       max={getMaxDate()}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

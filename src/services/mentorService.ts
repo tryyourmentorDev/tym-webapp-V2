@@ -349,11 +349,16 @@ class MentorService {
 
   /**
    * Get a mentor's admin-defined bookable slots (only free ones are ever
-   * returned — active, in the future, and not already booked).
+   * returned — active, in the future, and not already booked). Pass `date`
+   * (YYYY-MM-DD) to scope to a single day — the booking form calls this each
+   * time the mentee picks a date, to populate the time dropdown.
    */
-  async getMentorSlots(mentorId: string): Promise<MentorSlot[]> {
+  async getMentorSlots(mentorId: string, date?: string): Promise<MentorSlot[]> {
     try {
-      const response = await fetch(`${this.baseURL}/mentors/${mentorId}/slots`, {
+      const url = date
+        ? `${this.baseURL}/mentors/${mentorId}/slots?date=${encodeURIComponent(date)}`
+        : `${this.baseURL}/mentors/${mentorId}/slots`;
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
