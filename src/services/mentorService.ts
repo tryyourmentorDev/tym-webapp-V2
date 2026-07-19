@@ -46,6 +46,15 @@ export interface MentorAvailability {
   unavailableDateTime: MentorUnavailableDateTime;
 }
 
+// A single admin-defined bookable slot (mentor_availability_slots). The
+// booking endpoint below only ever returns free ones (active, in the future,
+// not already booked).
+export interface MentorSlot {
+  id: number;
+  startTime: string; // ISO timestamp
+  endTime: string; // ISO timestamp
+}
+
 export interface MentorBookingPayload {
   user: {
     firstName: string;
@@ -335,6 +344,37 @@ class MentorService {
         `Error fetching mentor availability for ${mentorId}:`,
         error
       );
+      throw error;
+    }
+  }
+
+  /**
+   * Get a mentor's admin-defined bookable slots (only free ones are ever
+   * returned — active, in the future, and not already booked).
+   */
+  async getMentorSlots(mentorId: string): Promise<MentorSlot[]> {
+    try {
+      const response = await fetch(`${this.baseURL}/mentors/${mentorId}/slots`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) return [];
+
+      return data.map((slot: any) => ({
+        id: slot.id,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+      }));
+    } catch (error) {
+      console.error(`Error fetching mentor slots for ${mentorId}:`, error);
       throw error;
     }
   }

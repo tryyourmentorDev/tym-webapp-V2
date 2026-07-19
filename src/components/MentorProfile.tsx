@@ -15,14 +15,32 @@ import type { Mentor, Mentee } from "../App";
 import {
   mentorService,
   type MentorReview,
-  type MentorUnavailableDateTime,
+  type MentorSlot,
 } from "../services/mentorService";
+import { FALLBACK_AVATAR, handleAvatarError } from "../utils/avatar";
 
-const defaultWorkingHours = {
-  start: "09:00",
-  end: "18:00",
-  timezone: "UTC",
-};
+// All admin-defined slots are managed in IST — dates/times in the booking form
+// are displayed and reconstructed in this timezone (Asia/Kolkata, UTC+05:30,
+// no DST), consistent with the rest of the platform.
+const BOOKING_TIMEZONE = "Asia/Kolkata";
+
+const istDateKey = (iso: string): string =>
+  new Date(iso).toLocaleDateString("en-CA", { timeZone: BOOKING_TIMEZONE });
+
+const istTimeValue = (iso: string): string =>
+  new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: BOOKING_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+const istTimeLabel = (iso: string): string =>
+  new Date(iso).toLocaleTimeString(undefined, {
+    timeZone: BOOKING_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 type BookingFormState = {
   firstName: string;
@@ -94,27 +112,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   const [reviews, setReviews] = useState<MentorReview[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
-  const [workingHours, setWorkingHours] = useState(() => {
-    if (mentor.workingHours?.start && mentor.workingHours?.end) {
-      return {
-        start: mentor.workingHours.start,
-        end: mentor.workingHours.end,
-        timezone: mentor.workingHours.timezone ?? defaultWorkingHours.timezone,
-      };
-    }
-    return defaultWorkingHours;
-  });
-  const [workingDays, setWorkingDays] = useState<number[]>(
-    mentor.workingDays && mentor.workingDays.length > 0
-      ? mentor.workingDays
-      : [1, 2, 3, 4, 5]
-  );
-  const [unavailableDateTime, setUnavailableDateTime] =
-    useState<MentorUnavailableDateTime>(
-      mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
-        ? mentor.unavailableDateTime
-        : {}
-    );
+  const [slots, setSlots] = useState<MentorSlot[]>([]);
   const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [isBookingLoading, setIsBookingLoading] = useState(false);
@@ -132,24 +130,8 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     setAvailabilityError(null);
     setIsAvailabilityLoading(true);
     try {
-      const availability = await mentorService.getMentorAvailability(mentor.id);
-      setWorkingHours(
-        availability.workingHours
-          ? {
-              start: availability.workingHours.start,
-              end: availability.workingHours.end,
-              timezone:
-                availability.workingHours.timezone ??
-                defaultWorkingHours.timezone,
-            }
-          : defaultWorkingHours
-      );
-      setWorkingDays(
-        availability.workingDays.length > 0
-          ? availability.workingDays
-          : [1, 2, 3, 4, 5]
-      );
-      setUnavailableDateTime(availability.unavailableDateTime);
+      const freeSlots = await mentorService.getMentorSlots(mentor.id);
+      setSlots(freeSlots);
     } catch (error) {
       setAvailabilityError(
         error instanceof Error
@@ -188,10 +170,6 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
 
     setIsBookingLoading(true);
     try {
-      const timezone =
-        workingHours.timezone ??
-        Intl.DateTimeFormat().resolvedOptions().timeZone ??
-        defaultWorkingHours.timezone;
       const menteeDetails = menteeProfile
         ? {
             educationQualificationId: menteeProfile.educationLevelId ?? null,
@@ -220,7 +198,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           mentorId: mentor.id,
           date: bookingForm.selectedDate,
           time: bookingForm.selectedTime,
-          timezone,
+          timezone: BOOKING_TIMEZONE,
           city: bookingForm.city.trim(),
           sessionExpectations:
             bookingForm.sessionExpectations.trim() || undefined,
@@ -328,54 +306,18 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
     return maxDate.toISOString().split("T")[0];
   };
 
-  const isDateAvailable = (dateString: string): boolean => {
-    const date = new Date(dateString);
-    const dayOfWeek = date.getDay();
+  const getAvailableTimes = (
+    selectedDate: string
+  ): { value: string; label: string }[] => {
+    if (!selectedDate || isAvailabilityLoading) return [];
 
-    // Check if it's a working day for this mentor
-    if (!workingDays.includes(dayOfWeek)) return false;
-
-    // Check if the entire day is unavailable
-    const dateAvailability = unavailableDateTime[dateString];
-    if (dateAvailability === "full-day") return false;
-
-    // Check if it's in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date >= today;
-  };
-
-  const generateTimeSlots = (): string[] => {
-    const times = [];
-    const startHour = parseInt(workingHours.start.split(":")[0]);
-    const endHour = parseInt(workingHours.end.split(":")[0]);
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      times.push(`${hour.toString().padStart(2, "0")}:00`);
-    }
-
-    return times;
-  };
-
-  const getAvailableTimes = (selectedDate: string): string[] => {
-    if (
-      !selectedDate ||
-      !isDateAvailable(selectedDate) ||
-      isAvailabilityLoading
-    )
-      return [];
-
-    const allTimes = generateTimeSlots();
-    const dateAvailability = unavailableDateTime[selectedDate];
-
-    // If the entire day is unavailable, return empty array
-    if (dateAvailability === "full-day") return [];
-
-    // If there are specific unavailable times, filter them out
-    const unavailableForDate = Array.isArray(dateAvailability)
-      ? dateAvailability
-      : [];
-    return allTimes.filter((time) => !unavailableForDate.includes(time));
+    return slots
+      .filter((slot) => istDateKey(slot.startTime) === selectedDate)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .map((slot) => ({
+        value: istTimeValue(slot.startTime),
+        label: `${istTimeLabel(slot.startTime)} – ${istTimeLabel(slot.endTime)}`,
+      }));
   };
 
   const handleOpenBookingModal = () => {
@@ -428,8 +370,9 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
           <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
             <img
-              src={mentor.image}
+              src={mentor.image || FALLBACK_AVATAR}
               alt={mentor.name}
+              onError={handleAvatarError}
               className="w-32 h-32 rounded-full object-cover mx-auto md:mx-0"
             />
 
@@ -659,8 +602,9 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                       aria-label={`View profile for ${similar.name}`}
                     >
                       <img
-                        src={similar.image}
+                        src={similar.image || FALLBACK_AVATAR}
                         alt={similar.name}
+                        onError={handleAvatarError}
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
@@ -842,7 +786,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Preferred Time *
+                      Preferred Time Slot *
                     </label>
                     <select
                       value={bookingForm.selectedTime}
@@ -858,9 +802,9 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     >
                       <option value="">Select a time</option>
                       {getAvailableTimes(bookingForm.selectedDate).map(
-                        (time) => (
-                          <option key={time} value={time}>
-                            {time}
+                        (slot) => (
+                          <option key={slot.value} value={slot.value}>
+                            {slot.label}
                           </option>
                         )
                       )}

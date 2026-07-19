@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Mentee, Mentor } from "../App";
 import { useMentors } from "../hooks/useMentors";
+import { FALLBACK_AVATAR, handleAvatarError } from "../utils/avatar";
 
 interface MentorDiscoveryProps {
   menteeProfile: Mentee;
@@ -378,8 +379,9 @@ const MentorCard: React.FC<{
     >
       <div className="flex items-start space-x-4 mb-4">
         <img
-          src={mentor.image}
+          src={mentor.image || FALLBACK_AVATAR}
           alt={mentor.name}
+          onError={handleAvatarError}
           className="w-16 h-16 rounded-full object-cover"
         />
         <div className="flex-1 min-w-0">
