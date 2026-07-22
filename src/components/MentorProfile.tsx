@@ -10,6 +10,7 @@ import {
   Heart,
   Share,
   Loader2,
+  Linkedin,
 } from "lucide-react";
 import type { Mentor, Mentee } from "../App";
 import {
@@ -449,6 +450,18 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     {mentor.languages.join(", ")}
                   </span>
                 </div>
+                {mentor.linkedinUrl && (
+                  <a
+                    href={mentor.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-[#0A66C2] hover:text-[#004182] transition-colors"
+                    aria-label={`View ${mentor.name}'s LinkedIn profile`}
+                  >
+                    <Linkedin className="w-5 h-5 mr-2" />
+                    <span className="font-medium">LinkedIn</span>
+                  </a>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">

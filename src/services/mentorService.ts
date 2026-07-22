@@ -128,6 +128,10 @@ const normalizeMentor = (mentor: any): Mentor => {
       : [],
     image: mentor.image ?? "",
     industry: mentor.industry ?? "",
+    linkedinUrl:
+      typeof mentor.linkedinUrl === "string" && mentor.linkedinUrl.trim()
+        ? mentor.linkedinUrl
+        : undefined,
     unavailableDateTime:
       mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
         ? mentor.unavailableDateTime

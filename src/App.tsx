@@ -31,6 +31,7 @@ export interface Mentor {
   achievements: string[];
   image: string;
   industry: string;
+  linkedinUrl?: string;
   // Availability scheduling
   unavailableDateTime?: {
     [date: string]: string[] | "full-day"; // "full-day" for entire day unavailable, or array of unavailable time slots
