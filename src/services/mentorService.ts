@@ -31,10 +31,7 @@ export interface MentorReviewResponse {
   total: number;
 }
 
-export type MentorUnavailableDateTime = Record<
-  string,
-  "full-day" | string[]
->;
+export type MentorUnavailableDateTime = Record<string, "full-day" | string[]>;
 
 export interface MentorAvailability {
   workingHours: {
@@ -121,11 +118,11 @@ const normalizeMentor = (mentor: any): Mentor => {
       typeof mentor.reviewCount === "number" ? mentor.reviewCount : 0,
     availability: mentor.availability ?? "",
     location: mentor.location ?? "",
-    languages: Array.isArray(mentor.languages) ? mentor.languages : [mentor.languages],
+    languages: Array.isArray(mentor.languages)
+      ? mentor.languages
+      : [mentor.languages],
     bio: mentor.bio ?? "",
-    achievements: Array.isArray(mentor.achievements)
-      ? mentor.achievements
-      : [],
+    achievements: Array.isArray(mentor.achievements) ? mentor.achievements : [],
     image: mentor.image ?? "",
     industry: mentor.industry ?? "",
     linkedinUrl:
@@ -133,7 +130,8 @@ const normalizeMentor = (mentor: any): Mentor => {
         ? mentor.linkedinUrl
         : undefined,
     unavailableDateTime:
-      mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
+      mentor.unavailableDateTime &&
+      typeof mentor.unavailableDateTime === "object"
         ? mentor.unavailableDateTime
         : {},
     workingHours:
@@ -151,7 +149,8 @@ class MentorService {
   constructor() {
     // Use environment variable or default to localhost for development
     this.baseURL =
-      import.meta.env.VITE_API_BASE_URL || "https://try-your-mentor-bff.onrender.com";
+      import.meta.env.VITE_API_BASE_URL ||
+      "https://try-your-mentor-bff.onrender.com";
 
     this.matchingEndpoint =
       import.meta.env.VITE_MATCHING_URL ||
@@ -165,7 +164,7 @@ class MentorService {
    */
   async fetchMentors(
     filters: MentorFilters = {},
-    menteeProfile?: Mentee
+    menteeProfile?: Mentee,
   ): Promise<MentorResponse> {
     try {
       const payload: MentorSearchPayload = {
@@ -279,6 +278,7 @@ class MentorService {
    */
   async getMentorReviews(mentorId: string): Promise<MentorReviewResponse> {
     try {
+      console.log(`Fetching mentor reviews for ${mentorId}...`);
       const response = await fetch(
         `${this.baseURL}/mentor-reviews/${mentorId}`,
         {
@@ -286,7 +286,7 @@ class MentorService {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -317,7 +317,7 @@ class MentorService {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -345,7 +345,7 @@ class MentorService {
     } catch (error) {
       console.error(
         `Error fetching mentor availability for ${mentorId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -392,7 +392,7 @@ class MentorService {
    */
   async bookMentorSession(
     mentorId: string,
-    payload: MentorBookingPayload
+    payload: MentorBookingPayload,
   ): Promise<MentorBookingResponse> {
     try {
       const response = await fetch(
@@ -403,14 +403,13 @@ class MentorService {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
         const message =
-          errorBody?.message ||
-          `HTTP error! status: ${response.status}`;
+          errorBody?.message || `HTTP error! status: ${response.status}`;
         throw new Error(message);
       }
 
@@ -427,7 +426,7 @@ class MentorService {
    */
   async fetchMentorsWithFallback(
     filters: MentorFilters = {},
-    menteeProfile?: Mentee
+    menteeProfile?: Mentee,
   ): Promise<MentorResponse> {
     return this.fetchMentors(filters, menteeProfile);
   }
