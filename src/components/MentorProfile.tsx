@@ -77,7 +77,9 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-const extractExperienceYears = (experienceLevel?: string | null): number | null => {
+const extractExperienceYears = (
+  experienceLevel?: string | null,
+): number | null => {
   if (!experienceLevel) return null;
   const match = experienceLevel.match(/\d+/);
   if (!match) return null;
@@ -106,14 +108,16 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   const [message, setMessage] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingFormState>(() =>
-    createEmptyBookingForm()
+    createEmptyBookingForm(),
   );
   const [reviews, setReviews] = useState<MentorReview[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [slots, setSlots] = useState<MentorSlot[]>([]);
   const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
-  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(
+    null,
+  );
   const [isBookingLoading, setIsBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -149,7 +153,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           setAvailabilityError(
             error instanceof Error
               ? error.message
-              : "Failed to load availability for this date."
+              : "Failed to load availability for this date.",
           );
         }
       })
@@ -204,7 +208,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
             expectedJobRoleId: menteeProfile.jobRoleId ?? null,
             experienceLevel: menteeProfile.experienceLevel ?? null,
             experienceYears: extractExperienceYears(
-              menteeProfile.experienceLevel
+              menteeProfile.experienceLevel,
             ),
             interests: menteeProfile.interests ?? [],
             goals: menteeProfile.goals ?? [],
@@ -235,12 +239,12 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
 
       const response = await mentorService.bookMentorSession(
         mentor.id,
-        payload
+        payload,
       );
 
       setBookingSuccess(
         response.message ??
-          "Session booked successfully! We'll reach out with next steps."
+          "Session booked successfully! We'll reach out with next steps.",
       );
       resetBookingForm();
       // Briefly show the confirmation, then close the booking popup.
@@ -251,7 +255,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
       setBookingError(
         error instanceof Error
           ? error.message
-          : "Failed to book the session. Please try again."
+          : "Failed to book the session. Please try again.",
       );
     } finally {
       setIsBookingLoading(false);
@@ -307,7 +311,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           setReviewsError(
             error instanceof Error
               ? error.message
-              : "Failed to load mentor reviews"
+              : "Failed to load mentor reviews",
           );
         }
       } finally {
@@ -336,7 +340,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
   };
 
   const getAvailableTimes = (
-    selectedDate: string
+    selectedDate: string,
   ): { value: string; label: string }[] => {
     if (!selectedDate || isAvailabilityLoading) return [];
 
@@ -469,13 +473,13 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
+                {/* <button
                   onClick={() => setShowContactForm(true)}
                   className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
                   Send Message
-                </button>
+                </button> */}
                 <button
                   onClick={handleOpenBookingModal}
                   className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
@@ -548,7 +552,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                   {reviews.map((review) => {
                     const normalizedRating = Math.max(
                       0,
-                      Math.min(5, Math.round(review.rating ?? 0))
+                      Math.min(5, Math.round(review.rating ?? 0)),
                     );
                     return (
                       <div
@@ -864,7 +868,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                           <option key={slot.value} value={slot.value}>
                             {slot.label}
                           </option>
-                        )
+                        ),
                       )}
                     </select>
                     {isAvailabilityLoading && (
@@ -881,9 +885,11 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                     {!isAvailabilityLoading &&
                       !availabilityError &&
                       bookingForm.selectedDate &&
-                      getAvailableTimes(bookingForm.selectedDate).length === 0 && (
+                      getAvailableTimes(bookingForm.selectedDate).length ===
+                        0 && (
                         <p className="text-sm text-orange-600 mt-1">
-                          No times available on this date. Please choose another day.
+                          No times available on this date. Please choose another
+                          day.
                         </p>
                       )}
                   </div>

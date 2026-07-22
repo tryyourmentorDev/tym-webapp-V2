@@ -33,25 +33,61 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [industriesLoading, setIndustriesLoading] = useState(true);
   const [industriesError, setIndustriesError] = useState(false);
 
+  const [educationLevels, setEducationLevels] = useState<RankedOption[]>([]);
+
+  const [jobRoleOptions, setJobRoleOptions] = useState<RankedOption[]>([]);
+  const [jobRolesLoading, setJobRolesLoading] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
-    const loadIndustries = async () => {
+    const loadLookups = async () => {
       setIndustriesLoading(true);
-      const industries = await mentorService.getIndustries();
+      const [industries, qualifications] = await Promise.all([
+        mentorService.getIndustries(),
+        mentorService.getQualifications(),
+      ]);
       if (cancelled) return;
       setIndustryOptions(
         industries.map((industry) => ({ id: industry.id, label: industry.name }))
+      );
+      setEducationLevels(
+        qualifications.map((q) => ({ id: q.id, label: q.name }))
       );
       setIndustriesError(industries.length === 0);
       setIndustriesLoading(false);
     };
 
-    loadIndustries();
+    loadLookups();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Load the job roles for the selected industry whenever it changes, so the
+  // options and their IDs always come from the DB (see mentorService.getJobRoles).
+  useEffect(() => {
+    let cancelled = false;
+    const industryId = formData.industryId;
+
+    if (industryId === undefined) {
+      setJobRoleOptions([]);
+      return;
+    }
+
+    const loadJobRoles = async () => {
+      setJobRolesLoading(true);
+      const roles = await mentorService.getJobRoles(industryId);
+      if (cancelled) return;
+      setJobRoleOptions(roles.map((role) => ({ id: role.id, label: role.name })));
+      setJobRolesLoading(false);
+    };
+
+    loadJobRoles();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.industryId]);
 
   const goalOptions = [
     "Find a job",
@@ -76,50 +112,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     "Mid Senior (8-10 years)",
     "Executive (11+ years)",
   ];
-
-  const educationLevels: RankedOption[] = [
-    { id: 1, label: "High School" },
-    { id: 2, label: "Diploma" },
-    { id: 3, label: "Bachelor's Degree" },
-    { id: 4, label: "Master's Degree" },
-    { id: 5, label: "Other" },
-  ];
-
-  // Job roles mapping based on selected industry
-  const jobRolesMapping: Record<number, RankedOption[]> = {
-    1: [
-      { id: 1, label: "Intern Software Engineer" },
-      { id: 11, label: "Associate Software Engineer" },
-      { id: 12, label: "Software Engineer" },
-      { id: 13, label: "Senior Software Engineer" },
-      { id: 14, label: "Associate Technical Lead" },
-      { id: 15, label: "Technical Lead" },
-      { id: 16, label: "Senior Technical Lead" },
-      { id: 17, label: "Software Architect" },
-    ],
-    2: [
-      { id: 9, label: "Intern Quality Engineer" },
-      { id: 10, label: "Associate Quality Engineer" },
-      { id: 11, label: "Quality Engineer" },
-      { id: 12, label: "Senior Quality Engineer" },
-      { id: 13, label: "Quality Lead" },
-      { id: 14, label: "Senior Quality Lead" },
-      { id: 15, label: "Software Architect" },
-    ],
-    3: [
-      { id: 16, label: "Business Analyst Intern" },
-      { id: 17, label: "Junior Business Analyst" },
-      { id: 18, label: "Business Analyst" },
-      { id: 19, label: "Senior Business Analyst" },
-      { id: 20, label: "Lead Business Analyst" },
-    ],
-  };
-
-  // Get job roles for selected industry
-  const getJobRolesForIndustry = (): RankedOption[] => {
-    const selectedIndustryId = formData.industryId;
-    return selectedIndustryId ? jobRolesMapping[selectedIndustryId] || [] : [];
-  };
 
   const handleInterestSelect = (industry: RankedOption) => {
     setFormData({
@@ -371,7 +363,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                       What is your current or target job role?
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {getJobRolesForIndustry().map((role) => (
+                      {jobRoleOptions.map((role) => (
                         <button
                           key={role.id}
                           onClick={() =>
@@ -391,10 +383,13 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                         </button>
                       ))}
                     </div>
-                    {getJobRolesForIndustry().length === 0 && (
+                    {jobRolesLoading && (
+                      <p className="text-gray-500 text-sm">Loading job roles…</p>
+                    )}
+                    {!jobRolesLoading && jobRoleOptions.length === 0 && (
                       <p className="text-gray-500 text-sm">
-                        Please select an industry first to see available job
-                        roles.
+                        No job roles are available for the selected area of
+                        expertise yet.
                       </p>
                     )}
                   </div>

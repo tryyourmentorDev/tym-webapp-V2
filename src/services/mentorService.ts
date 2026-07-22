@@ -242,6 +242,60 @@ class MentorService {
   }
 
   /**
+   * Get the job roles linked to a given industry. Used by onboarding's job-role
+   * step so the options (and their IDs) always match what the admin has onboarded,
+   * rather than a hardcoded list that can drift out of sync with the DB.
+   */
+  async getJobRoles(
+    industryId: number,
+  ): Promise<{ id: number; name: string }[]> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/job-roles?industryId=${industryId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching job roles:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all qualifications (education levels) from the backend. Used by
+   * onboarding's education step so the IDs match the DB used for matching.
+   */
+  async getQualifications(): Promise<{ id: number; name: string }[]> {
+    try {
+      const response = await fetch(`${this.baseURL}/qualifications`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching qualifications:", error);
+      return [];
+    }
+  }
+
+  /**
    * Get available filter options from the backend
    */
   async getFilterOptions(): Promise<{
