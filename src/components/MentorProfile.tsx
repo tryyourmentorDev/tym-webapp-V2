@@ -472,23 +472,17 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                {/* <button
-                  onClick={() => setShowContactForm(true)}
-                  className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Send Message
-                </button> */}
-                <button
-                  onClick={handleOpenBookingModal}
-                  className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  <Calendar className="w-5 h-5 mr-2" />
-                  Book Now
-                </button>
-              </div>
             </div>
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleOpenBookingModal}
+              className="flex items-center justify-center px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              <Calendar className="w-5 h-5 mr-2" />
+              Book Now
+            </button>
           </div>
         </div>
 
