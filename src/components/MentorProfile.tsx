@@ -472,7 +472,7 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 {/* <button
                   onClick={() => setShowContactForm(true)}
                   className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
