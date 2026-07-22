@@ -243,6 +243,10 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
           "Session booked successfully! We'll reach out with next steps."
       );
       resetBookingForm();
+      // Briefly show the confirmation, then close the booking popup.
+      setTimeout(() => {
+        setShowBookingModal(false);
+      }, 1800);
     } catch (error) {
       setBookingError(
         error instanceof Error
