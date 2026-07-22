@@ -278,7 +278,6 @@ class MentorService {
    */
   async getMentorReviews(mentorId: string): Promise<MentorReviewResponse> {
     try {
-      console.log(`Fetching mentor reviews for ${mentorId}...`);
       const response = await fetch(
         `${this.baseURL}/mentor-reviews/${mentorId}`,
         {
