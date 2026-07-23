@@ -66,6 +66,10 @@ export interface MentorBookingPayload {
     experienceYears?: number | null;
     interests?: string[];
     goals?: string[];
+    // Human-readable onboarding labels captured for the admin booking snapshot.
+    expertise?: string | null;
+    educationLevel?: string | null;
+    jobRole?: string | null;
     city?: string;
   };
   booking: {

@@ -212,6 +212,11 @@ export const MentorProfile: React.FC<MentorProfileProps> = ({
             ),
             interests: menteeProfile.interests ?? [],
             goals: menteeProfile.goals ?? [],
+            // Labels for the admin booking snapshot (interests[0] is the Step-1
+            // industry/expertise label).
+            expertise: menteeProfile.interests?.[0] ?? null,
+            educationLevel: menteeProfile.educationLevel ?? null,
+            jobRole: menteeProfile.jobRole ?? null,
             city: bookingForm.city.trim() || undefined,
           }
         : {
