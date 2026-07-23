@@ -272,6 +272,36 @@ class MentorService {
   }
 
   /**
+   * Get the goals linked to a given industry. Used by onboarding's goals step so
+   * the options always match what the admin has onboarded (goal_industries),
+   * rather than a hardcoded list that can drift out of sync with the DB.
+   */
+  async getGoals(
+    industryId: number,
+  ): Promise<{ id: number; name: string }[]> {
+    try {
+      const response = await fetch(
+        `${this.baseURL}/goals?industryId=${industryId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching goals:", error);
+      return [];
+    }
+  }
+
+  /**
    * Get all qualifications (education levels) from the backend. Used by
    * onboarding's education step so the IDs match the DB used for matching.
    */

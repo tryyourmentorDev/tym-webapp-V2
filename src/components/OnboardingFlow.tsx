@@ -38,6 +38,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [jobRoleOptions, setJobRoleOptions] = useState<RankedOption[]>([]);
   const [jobRolesLoading, setJobRolesLoading] = useState(false);
 
+  const [goalOptions, setGoalOptions] = useState<string[]>([]);
+  const [goalsLoading, setGoalsLoading] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -89,20 +92,32 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     };
   }, [formData.industryId]);
 
-  const goalOptions = [
-    "Find a job",
-    "Technical Skills Improvement",
-    "Soft Skills Development",
-    "Interview Preparation",
-    "Communication Skills",
-    "Career Transition",
-    "Leadership Growth",
-    "Job Search Strategy",
-    "Industry Knowledge",
-    "Meet Industry Experts",
-    "Project Management",
-    "Other",
-  ];
+  // Load the goals for the selected industry whenever it changes, so the options
+  // always come from the DB (goal_industries) and match what the admin onboarded
+  // for that industry (see mentorService.getGoals). "Other" is appended in the
+  // render as a UI-only escape hatch — it is not a DB goal.
+  useEffect(() => {
+    let cancelled = false;
+    const industryId = formData.industryId;
+
+    if (industryId === undefined) {
+      setGoalOptions([]);
+      return;
+    }
+
+    const loadGoals = async () => {
+      setGoalsLoading(true);
+      const goals = await mentorService.getGoals(industryId);
+      if (cancelled) return;
+      setGoalOptions(goals.map((goal) => goal.name));
+      setGoalsLoading(false);
+    };
+
+    loadGoals();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.industryId]);
 
   const experienceLevels = [
     "Student/Entry Level",
@@ -118,6 +133,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       ...formData,
       interests: [industry.label],
       industryId: industry.id,
+      // Goals are filtered by industry, so clear any prior selection that may
+      // not be valid for the newly-selected industry (same as jobRole below).
+      goals: [],
       jobRole: "",
       jobRoleId: undefined,
     });
@@ -264,24 +282,28 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 Help us understand what you want to achieve through mentorship.
               </p>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {goalOptions.map((goal) => {
-                  const isSelected = formData.goals?.includes(goal);
-                  return (
-                    <button
-                      key={goal}
-                      onClick={() => handleGoalToggle(goal)}
-                      className={`p-4 rounded-xl text-left transition-all ${
-                        isSelected
-                          ? "bg-purple-600 text-white shadow-md transform scale-105"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <span className="font-medium">{goal}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {goalsLoading ? (
+                <div className="text-gray-500">Loading goals…</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[...goalOptions, "Other"].map((goal) => {
+                    const isSelected = formData.goals?.includes(goal);
+                    return (
+                      <button
+                        key={goal}
+                        onClick={() => handleGoalToggle(goal)}
+                        className={`p-4 rounded-xl text-left transition-all ${
+                          isSelected
+                            ? "bg-purple-600 text-white shadow-md transform scale-105"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        <span className="font-medium">{goal}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {(formData.goals?.length || 0) > 0 && (
                 <div className="mt-6 text-sm text-gray-600">
