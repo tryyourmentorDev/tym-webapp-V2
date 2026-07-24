@@ -31,7 +31,10 @@ export interface MentorReviewResponse {
   total: number;
 }
 
-export type MentorUnavailableDateTime = Record<string, "full-day" | string[]>;
+export type MentorUnavailableDateTime = Record<
+  string,
+  "full-day" | string[]
+>;
 
 export interface MentorAvailability {
   workingHours: {
@@ -41,15 +44,6 @@ export interface MentorAvailability {
   } | null;
   workingDays: number[];
   unavailableDateTime: MentorUnavailableDateTime;
-}
-
-// A single admin-defined bookable slot (mentor_availability_slots). The
-// booking endpoint below only ever returns free ones (active, in the future,
-// not already booked).
-export interface MentorSlot {
-  id: number;
-  startTime: string; // ISO timestamp
-  endTime: string; // ISO timestamp
 }
 
 export interface MentorBookingPayload {
@@ -66,10 +60,6 @@ export interface MentorBookingPayload {
     experienceYears?: number | null;
     interests?: string[];
     goals?: string[];
-    // Human-readable onboarding labels captured for the admin booking snapshot.
-    expertise?: string | null;
-    educationLevel?: string | null;
-    jobRole?: string | null;
     city?: string;
   };
   booking: {
@@ -79,12 +69,12 @@ export interface MentorBookingPayload {
     timezone: string;
     city: string;
     sessionExpectations?: string;
-    cv?: {
+    cv: {
       fileName: string;
       mimeType: string;
       size: number;
       base64: string;
-    };
+    } | null;
   };
 }
 
@@ -109,7 +99,30 @@ interface MentorSearchPayload {
   filters: MentorFilters;
 }
 
-const normalizeMentor = (mentor: any): Mentor => {
+type MentorApiRecord = Omit<
+  Partial<Mentor>,
+  "id" | "reviewCount" | "rating" | "charge"
+> & {
+  id?: string | number;
+  reviewCount?: number | string;
+  rating?: number | string;
+  charge?: number | string | null;
+  linkedin_url?: string;
+  mentor_type?: string;
+  experienceYears?: number | string | null;
+  experience_years?: number | string | null;
+};
+
+const normalizeMentor = (mentor: MentorApiRecord): Mentor => {
+  const languages = Array.isArray(mentor.languages)
+    ? mentor.languages
+    : typeof mentor.languages === "string"
+      ? mentor.languages
+          .split(",")
+          .map((language) => language.trim())
+          .filter(Boolean)
+      : [];
+
   return {
     id: mentor.id?.toString() ?? "",
     name: mentor.name ?? "",
@@ -117,25 +130,45 @@ const normalizeMentor = (mentor: any): Mentor => {
     company: mentor.company ?? "",
     expertise: Array.isArray(mentor.expertise) ? mentor.expertise : [],
     experience: mentor.experience ?? "",
-    rating: typeof mentor.rating === "number" ? mentor.rating : 0,
+    experienceYears:
+      mentor.experienceYears !== undefined &&
+      mentor.experienceYears !== null &&
+      Number.isFinite(Number(mentor.experienceYears))
+        ? Number(mentor.experienceYears)
+        : mentor.experience_years !== undefined &&
+            mentor.experience_years !== null &&
+            Number.isFinite(Number(mentor.experience_years))
+          ? Number(mentor.experience_years)
+          : null,
+    rating:
+      mentor.rating !== undefined && Number.isFinite(Number(mentor.rating))
+        ? Number(mentor.rating)
+        : 0,
     reviewCount:
-      typeof mentor.reviewCount === "number" ? mentor.reviewCount : 0,
+      mentor.reviewCount !== undefined &&
+      Number.isFinite(Number(mentor.reviewCount))
+        ? Number(mentor.reviewCount)
+        : 0,
     availability: mentor.availability ?? "",
     location: mentor.location ?? "",
-    languages: Array.isArray(mentor.languages)
-      ? mentor.languages
-      : [mentor.languages],
+    languages,
     bio: mentor.bio ?? "",
-    achievements: Array.isArray(mentor.achievements) ? mentor.achievements : [],
+    achievements: Array.isArray(mentor.achievements)
+      ? mentor.achievements
+      : [],
     image: mentor.image ?? "",
     industry: mentor.industry ?? "",
-    linkedinUrl:
-      typeof mentor.linkedinUrl === "string" && mentor.linkedinUrl.trim()
-        ? mentor.linkedinUrl
-        : undefined,
+    charge:
+      mentor.charge !== undefined &&
+      mentor.charge !== null &&
+      Number.isFinite(Number(mentor.charge))
+        ? Number(mentor.charge)
+        : null,
+    currency: mentor.currency ?? "LKR",
+    linkedinUrl: mentor.linkedinUrl ?? mentor.linkedin_url,
+    mentorType: mentor.mentorType ?? mentor.mentor_type,
     unavailableDateTime:
-      mentor.unavailableDateTime &&
-      typeof mentor.unavailableDateTime === "object"
+      mentor.unavailableDateTime && typeof mentor.unavailableDateTime === "object"
         ? mentor.unavailableDateTime
         : {},
     workingHours:
@@ -153,8 +186,7 @@ class MentorService {
   constructor() {
     // Use environment variable or default to localhost for development
     this.baseURL =
-      import.meta.env.VITE_API_BASE_URL ||
-      "https://try-your-mentor-bff.onrender.com";
+      import.meta.env.VITE_API_BASE_URL || "https://try-your-mentor-bff.onrender.com";
 
     this.matchingEndpoint =
       import.meta.env.VITE_MATCHING_URL ||
@@ -168,7 +200,7 @@ class MentorService {
    */
   async fetchMentors(
     filters: MentorFilters = {},
-    menteeProfile?: Mentee,
+    menteeProfile?: Mentee
   ): Promise<MentorResponse> {
     try {
       const payload: MentorSearchPayload = {
@@ -201,12 +233,21 @@ class MentorService {
 
       const data = await response.json();
 
-      const mentors = Array.isArray(data.mentors)
+      const normalizedMentors = Array.isArray(data.mentors)
         ? data.mentors.map(normalizeMentor)
         : [];
+      const mentors = Array.from(
+        new Map(normalizedMentors.map((mentor) => [mentor.id, mentor])).values()
+      );
 
       const recommended = Array.isArray(data.recommended)
-        ? data.recommended.map(normalizeMentor)
+        ? Array.from(
+            new Map(
+              data.recommended
+                .map(normalizeMentor)
+                .map((mentor) => [mentor.id, mentor])
+            ).values()
+          )
         : undefined;
 
       return {
@@ -217,115 +258,6 @@ class MentorService {
     } catch (error) {
       console.error("Error fetching mentors:", error);
       throw error;
-    }
-  }
-
-  /**
-   * Get all industries from the backend. Used by onboarding's "areas of
-   * expertise" step, which despite its wording actually selects an industry
-   * (drives industryId for job-role filtering and mentor matching).
-   */
-  async getIndustries(): Promise<{ id: number; name: string }[]> {
-    try {
-      const response = await fetch(`${this.baseURL}/industries`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching industries:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Get the job roles linked to a given industry. Used by onboarding's job-role
-   * step so the options (and their IDs) always match what the admin has onboarded,
-   * rather than a hardcoded list that can drift out of sync with the DB.
-   */
-  async getJobRoles(
-    industryId: number,
-  ): Promise<{ id: number; name: string }[]> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/job-roles?industryId=${industryId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching job roles:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Get the goals linked to a given industry. Used by onboarding's goals step so
-   * the options always match what the admin has onboarded (goal_industries),
-   * rather than a hardcoded list that can drift out of sync with the DB.
-   */
-  async getGoals(
-    industryId: number,
-  ): Promise<{ id: number; name: string }[]> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/goals?industryId=${industryId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching goals:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Get all qualifications (education levels) from the backend. Used by
-   * onboarding's education step so the IDs match the DB used for matching.
-   */
-  async getQualifications(): Promise<{ id: number; name: string }[]> {
-    try {
-      const response = await fetch(`${this.baseURL}/qualifications`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching qualifications:", error);
-      return [];
     }
   }
 
@@ -366,7 +298,6 @@ class MentorService {
    */
   async getMentorReviews(mentorId: string): Promise<MentorReviewResponse> {
     try {
-      console.log(`Fetching mentor reviews for ${mentorId}...`);
       const response = await fetch(
         `${this.baseURL}/mentor-reviews/${mentorId}`,
         {
@@ -374,7 +305,7 @@ class MentorService {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -405,7 +336,7 @@ class MentorService {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -433,44 +364,8 @@ class MentorService {
     } catch (error) {
       console.error(
         `Error fetching mentor availability for ${mentorId}:`,
-        error,
+        error
       );
-      throw error;
-    }
-  }
-
-  /**
-   * Get a mentor's admin-defined bookable slots (only free ones are ever
-   * returned — active, in the future, and not already booked). Pass `date`
-   * (YYYY-MM-DD) to scope to a single day — the booking form calls this each
-   * time the mentee picks a date, to populate the time dropdown.
-   */
-  async getMentorSlots(mentorId: string, date?: string): Promise<MentorSlot[]> {
-    try {
-      const url = date
-        ? `${this.baseURL}/mentors/${mentorId}/slots?date=${encodeURIComponent(date)}`
-        : `${this.baseURL}/mentors/${mentorId}/slots`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!Array.isArray(data)) return [];
-
-      return data.map((slot: any) => ({
-        id: slot.id,
-        startTime: slot.start_time,
-        endTime: slot.end_time,
-      }));
-    } catch (error) {
-      console.error(`Error fetching mentor slots for ${mentorId}:`, error);
       throw error;
     }
   }
@@ -480,7 +375,7 @@ class MentorService {
    */
   async bookMentorSession(
     mentorId: string,
-    payload: MentorBookingPayload,
+    payload: MentorBookingPayload
   ): Promise<MentorBookingResponse> {
     try {
       const response = await fetch(
@@ -491,13 +386,14 @@ class MentorService {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
         const message =
-          errorBody?.message || `HTTP error! status: ${response.status}`;
+          errorBody?.message ||
+          `HTTP error! status: ${response.status}`;
         throw new Error(message);
       }
 
@@ -509,12 +405,249 @@ class MentorService {
   }
 
   /**
+   * Fallback method using mock data for development/testing
+   */
+  getMockMentors(): Mentor[] {
+    return [
+      {
+        id: "1",
+        name: "Sarah Chen",
+        title: "Senior Software Engineer",
+        company: "Google",
+        expertise: [
+          "Software Engineering",
+          "AI/Machine Learning",
+          "Career Transition",
+        ],
+        experience: "Senior (8-12 years)",
+        rating: 4.9,
+        reviewCount: 127,
+        availability: "Available",
+        location: "San Francisco, CA",
+        languages: ["English", "Mandarin"],
+        bio: "Passionate about helping engineers transition into senior roles and develop leadership skills.",
+        achievements: [
+          "Led team of 15 engineers",
+          "Built ML systems serving 1B+ users",
+          "Published 12 papers",
+        ],
+        image:
+          "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2024-12-25": "full-day", // Christmas - completely unavailable
+          "2024-12-31": "full-day", // New Year's Eve - completely unavailable
+          "2025-01-01": "full-day", // New Year's Day - completely unavailable
+          "2024-11-15": ["10:00", "14:00"], // Specific times unavailable
+          "2024-11-16": ["09:00", "15:00"], // Specific times unavailable
+          "2024-11-20": ["11:00", "16:00"], // Specific times unavailable
+        },
+        workingHours: {
+          start: "09:00",
+          end: "17:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
+      },
+      {
+        id: "2",
+        name: "Marcus Johnson",
+        title: "VP of Product",
+        company: "Stripe",
+        expertise: [
+          "Product Management",
+          "Entrepreneurship",
+          "Leadership Growth",
+        ],
+        experience: "Executive (13+ years)",
+        rating: 4.8,
+        reviewCount: 89,
+        availability: "Limited",
+        location: "Remote",
+        languages: ["English", "Spanish"],
+        bio: "Expert in product strategy and building teams that ship world-class products.",
+        achievements: [
+          "Scaled product from 0 to $100M ARR",
+          "Built products used by 50M+ users",
+          "Ex-founder",
+        ],
+        image:
+          "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2025-11-28": "full-day", // Thanksgiving
+          "2025-11-29": "full-day", // Black Friday
+          "2025-12-20": "full-day", // Personal day
+          "2025-12-25": "full-day", // Christmas
+          "2025-12-31": "full-day", // New Year's Eve
+          "2024-11-18": ["09:00", "10:00", "11:00"], // Morning blocked
+          "2024-11-22": ["14:00", "15:00", "16:00", "17:00"], // Afternoon blocked
+          "2024-11-25": ["13:00", "14:00"], // Lunch meetings
+        },
+        workingHours: {
+          start: "10:00",
+          end: "18:00",
+          timezone: "EST",
+        },
+        workingDays: [1, 2, 3, 4], // Monday to Thursday (limited availability)
+      },
+      {
+        id: "3",
+        name: "Emily Rodriguez",
+        title: "Data Science Director",
+        company: "Netflix",
+        expertise: ["Data Science", "AI/Machine Learning", "Technical Skills"],
+        experience: "Senior (8-12 years)",
+        rating: 5.0,
+        reviewCount: 156,
+        availability: "Available",
+        location: "Los Angeles, CA",
+        languages: ["English", "Spanish", "Portuguese"],
+        bio: "Helping data professionals advance their careers and master advanced analytics.",
+        achievements: [
+          "Built recommendation algorithms",
+          "PhD in Computer Science",
+          "TEDx speaker",
+        ],
+        image:
+          "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2024-12-23": "full-day", // Holiday break
+          "2024-12-24": "full-day", // Christmas Eve
+          "2024-12-25": "full-day", // Christmas
+          "2024-11-14": ["12:00", "13:00"], // Lunch break
+          "2024-11-21": ["10:00", "11:00"], // Team meetings
+          "2024-11-27": ["15:00", "16:00", "17:00"], // Conference calls
+        },
+        workingHours: {
+          start: "08:00",
+          end: "16:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
+      },
+      {
+        id: "4",
+        name: "David Kim",
+        title: "Design Lead",
+        company: "Apple",
+        expertise: ["UX/UI Design", "Product Management", "Creative Direction"],
+        experience: "Senior (8-12 years)",
+        rating: 4.9,
+        reviewCount: 203,
+        availability: "Available",
+        location: "Cupertino, CA",
+        languages: ["English", "Korean"],
+        bio: "Award-winning designer passionate about creating intuitive user experiences.",
+        achievements: [
+          "Led design for iOS features",
+          "Design awards winner",
+          "Design thinking workshops",
+        ],
+        image:
+          "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2024-12-25": "full-day", // Christmas
+          "2024-12-26": "full-day", // Boxing Day
+          "2025-01-01": "full-day", // New Year's Day
+          "2025-01-02": "full-day", // Extended holiday
+          "2024-11-19": ["09:00", "10:00"], // Design review meetings
+          "2024-11-26": ["14:00", "15:00"], // Client presentations
+          "2024-12-03": ["11:00", "12:00"], // Team sync
+        },
+        workingHours: {
+          start: "09:00",
+          end: "18:00",
+          timezone: "PST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
+      },
+      {
+        id: "5",
+        name: "Jennifer Walsh",
+        title: "Marketing Director",
+        company: "HubSpot",
+        expertise: ["Marketing", "Sales", "Leadership Growth"],
+        experience: "Senior (8-12 years)",
+        rating: 4.7,
+        reviewCount: 94,
+        availability: "Available",
+        location: "Boston, MA",
+        languages: ["English", "French"],
+        bio: "Expert in growth marketing and building high-performing marketing teams.",
+        achievements: [
+          "Grew user base by 300%",
+          "Built $50M+ pipeline",
+          "Marketing awards",
+        ],
+        image:
+          "https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2024-11-28": "full-day", // Thanksgiving
+          "2024-11-29": "full-day", // Black Friday
+          "2024-12-25": "full-day", // Christmas
+          "2024-11-15": ["13:00", "14:00", "15:00"], // Marketing strategy meetings
+          "2024-11-22": ["10:00", "11:00"], // Campaign reviews
+          "2024-11-27": ["16:00", "17:00"], // End of month reporting
+        },
+        workingHours: {
+          start: "09:00",
+          end: "17:30",
+          timezone: "EST",
+        },
+        workingDays: [1, 2, 3, 4, 5], // Monday to Friday
+      },
+      {
+        id: "6",
+        name: "Alex Thompson",
+        title: "Startup Founder & CEO",
+        company: "CloudTech (Acquired)",
+        expertise: ["Entrepreneurship", "Leadership Growth", "Sales"],
+        experience: "Executive (13+ years)",
+        rating: 4.8,
+        reviewCount: 178,
+        availability: "Limited",
+        location: "Austin, TX",
+        languages: ["English"],
+        bio: "Serial entrepreneur with 2 successful exits. Love helping first-time founders.",
+        achievements: [
+          "2 successful exits",
+          "Raised $50M+ funding",
+          "Forbes 30 under 30",
+        ],
+        image:
+          "https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400",
+        industry: "Technology",
+        unavailableDateTime: {
+          "2024-11-25": "full-day", // Travel day
+          "2024-11-26": "full-day", // Conference
+          "2024-11-27": "full-day", // Conference
+          "2024-12-25": "full-day", // Christmas
+          "2024-12-31": "full-day", // New Year's Eve
+          "2025-11-14": ["09:00", "10:00", "11:00", "14:00", "15:00"], // Board meetings and investor calls
+          "2024-11-21": ["13:00", "14:00", "15:00", "16:00"], // Due diligence meetings
+          "2024-12-05": ["10:00", "11:00"], // Strategic planning
+        },
+        workingHours: {
+          start: "10:00",
+          end: "16:00", // Limited hours as an executive
+          timezone: "CST",
+        },
+        workingDays: [2, 4], // Tuesday and Thursday only (very limited)
+      },
+    ];
+  }
+
+  /**
    * Fallback method that simulates API behavior with mock data
    * Useful for development when backend is not available
    */
   async fetchMentorsWithFallback(
     filters: MentorFilters = {},
-    menteeProfile?: Mentee,
+    menteeProfile?: Mentee
   ): Promise<MentorResponse> {
     return this.fetchMentors(filters, menteeProfile);
   }

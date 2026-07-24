@@ -28,7 +28,7 @@ export const useDebounce = <T>(value: T, delay: number): T => {
  * @param delay - The debounce delay in milliseconds
  * @returns The debounced callback function
  */
-export const useDebouncedCallback = <T extends (...args: any[]) => void>(
+export const useDebouncedCallback = <T extends (...args: never[]) => void>(
   callback: T,
   delay: number
 ): T => {

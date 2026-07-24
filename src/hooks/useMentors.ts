@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Mentor, Mentee } from "../App";
 import { mentorService, type MentorFilters } from "../services/mentorService";
 import { useDebounce } from "./useDebounce";
@@ -22,6 +22,42 @@ export interface UseMentorsOptions {
   selectedExperience: string[];
   selectedAvailability: string[];
 }
+
+const parseExperienceYears = (value: string): number | null => {
+  const match = value.match(/\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const years = Number(match[0]);
+  return Number.isFinite(years) ? years : null;
+};
+
+const matchesExperienceSelection = (
+  mentor: Mentor,
+  selectedExperience: string[]
+) => {
+  if (selectedExperience.length === 0) return true;
+
+  const mentorYears =
+    parseExperienceYears(mentor.experience) ?? mentor.experienceYears ?? null;
+
+  return selectedExperience.some((filter) => {
+    const normalizedFilter = filter.trim().toLowerCase();
+    const numbers = normalizedFilter.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+
+    if (mentorYears !== null && numbers.length > 0) {
+      if (normalizedFilter.includes("+")) {
+        return mentorYears >= numbers[0];
+      }
+
+      if (numbers.length >= 2) {
+        return mentorYears >= numbers[0] && mentorYears <= numbers[1];
+      }
+
+      return mentorYears === numbers[0];
+    }
+
+    return mentor.experience.trim().toLowerCase() === normalizedFilter;
+  });
+};
 
 export const useMentors = ({
   menteeProfile,
@@ -63,14 +99,6 @@ export const useMentors = ({
         filters.educationLevelId = menteeProfile.educationLevelId;
       }
 
-      // Add search and filter parameters
-      if (debouncedSearchTerm) filters.search = debouncedSearchTerm;
-      if (selectedExpertise.length > 0) filters.expertise = selectedExpertise;
-      if (selectedExperience.length > 0)
-        filters.experience = selectedExperience;
-      if (selectedAvailability.length > 0)
-        filters.availability = selectedAvailability;
-
       const response = await mentorService.fetchMentorsWithFallback(
         filters,
         menteeProfile
@@ -84,61 +112,102 @@ export const useMentors = ({
     }
   }, [
     menteeProfile,
-    debouncedSearchTerm,
-    selectedExpertise,
-    selectedExperience,
-    selectedAvailability,
   ]);
-
-  const fetchFilterOptions = useCallback(async () => {
-    try {
-      const options = await mentorService.getFilterOptions();
-      setFilterOptions(options);
-    } catch (err) {
-      console.error("Error fetching filter options:", err);
-      // Generate filter options from existing mentors as fallback
-      const uniqueExpertise = Array.from(
-        new Set(mentors.flatMap((m) => m.expertise))
-      );
-      const uniqueExperience = Array.from(
-        new Set(mentors.map((m) => m.experience))
-      );
-      const uniqueAvailability = Array.from(
-        new Set(mentors.map((m) => m.availability))
-      );
-
-      setFilterOptions({
-        expertise: uniqueExpertise,
-        experience: uniqueExperience,
-        availability: uniqueAvailability,
-      });
-    }
-  }, [mentors]);
 
   // Initial fetch
   useEffect(() => {
     fetchMentors();
   }, [fetchMentors]);
 
-  // Fetch filter options when mentors change
+  // Keep filters relevant to the current shortlist instead of showing global
+  // options that would always produce an empty result.
   useEffect(() => {
-    if (mentors.length > 0 && filterOptions.expertise.length === 0) {
-      fetchFilterOptions();
-    }
-  }, [mentors, filterOptions.expertise.length, fetchFilterOptions]);
+    const experienceBuckets = new Set<string>();
+
+    mentors.forEach((mentor) => {
+      const years =
+        parseExperienceYears(mentor.experience) ??
+        mentor.experienceYears ??
+        null;
+      if (years === null) return;
+      if (years >= 5) experienceBuckets.add("5+ years");
+      else if (years >= 3) experienceBuckets.add("3–4 years");
+      else experienceBuckets.add("0–2 years");
+    });
+
+    const experienceOrder = ["0–2 years", "3–4 years", "5+ years"];
+
+    setFilterOptions({
+      expertise: Array.from(
+        new Set(mentors.flatMap((mentor) => mentor.expertise))
+      ).sort((a, b) => a.localeCompare(b)),
+      experience: experienceOrder.filter((item) =>
+        experienceBuckets.has(item)
+      ),
+      availability: Array.from(
+        new Set(
+          mentors
+            .map((mentor) => mentor.availability)
+            .filter((item) => item.trim().length > 0)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    });
+  }, [mentors]);
+
+  const visibleMentors = useMemo(() => {
+    const normalizedSearch = debouncedSearchTerm.trim().toLowerCase();
+
+    return mentors.filter((mentor) => {
+      const searchableText = [
+        mentor.name,
+        mentor.company,
+        mentor.title,
+        mentor.bio,
+        ...mentor.expertise,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        !normalizedSearch || searchableText.includes(normalizedSearch);
+      const matchesExpertise =
+        selectedExpertise.length === 0 ||
+        selectedExpertise.some((expertise) =>
+          mentor.expertise.includes(expertise)
+        );
+      const matchesExperience =
+        matchesExperienceSelection(mentor, selectedExperience);
+      const matchesAvailability =
+        selectedAvailability.length === 0 ||
+        selectedAvailability.includes(mentor.availability);
+
+      return (
+        matchesSearch &&
+        matchesExpertise &&
+        matchesExperience &&
+        matchesAvailability
+      );
+    });
+  }, [
+    mentors,
+    debouncedSearchTerm,
+    selectedExpertise,
+    selectedExperience,
+    selectedAvailability,
+  ]);
 
   // Categorize mentors based on user interests
-  const recommendedMentors = mentors.filter((mentor) =>
+  const recommendedMentors = visibleMentors.filter((mentor) =>
     mentor.expertise.some((exp) => menteeProfile.interests.includes(exp))
   );
 
-  const otherMentors = mentors.filter(
+  const otherMentors = visibleMentors.filter(
     (mentor) =>
       !mentor.expertise.some((exp) => menteeProfile.interests.includes(exp))
   );
 
   return {
-    mentors,
+    mentors: visibleMentors,
     recommendedMentors,
     otherMentors,
     isLoading,

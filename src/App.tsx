@@ -22,6 +22,7 @@ export interface Mentor {
   company: string;
   expertise: string[];
   experience: string;
+  experienceYears?: number | null;
   rating: number;
   reviewCount: number;
   availability: string;
@@ -31,7 +32,10 @@ export interface Mentor {
   achievements: string[];
   image: string;
   industry: string;
+  charge?: number | null;
+  currency?: string;
   linkedinUrl?: string;
+  mentorType?: string;
   // Availability scheduling
   unavailableDateTime?: {
     [date: string]: string[] | "full-day"; // "full-day" for entire day unavailable, or array of unavailable time slots
@@ -48,6 +52,7 @@ type AppStep = "landing" | "onboarding" | "discovery" | "profile";
 
 function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>("landing");
+  const [isRouteReady, setIsRouteReady] = useState(false);
   const [menteeProfile, setMenteeProfile] = useState<Mentee | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [similarMentors, setSimilarMentors] = useState<Mentor[]>([]);
@@ -94,6 +99,7 @@ function App() {
     }
 
     setCurrentStep(initialStep);
+    setIsRouteReady(true);
   }, []);
 
   // Handle browser back/forward buttons
@@ -159,6 +165,8 @@ function App() {
 
   // Update URL when step changes
   useEffect(() => {
+    if (!isRouteReady) return;
+
     const paths = {
       landing: "/",
       onboarding: "/onboarding",
@@ -178,10 +186,17 @@ function App() {
         window.history.pushState({ step: currentStep }, "", newPath);
       }
     }
+  }, [currentStep, isRouteReady]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, [currentStep]);
 
   // Helper function to navigate with proper state management
-  const navigateToStep = (step: AppStep, additionalState?: any) => {
+  const navigateToStep = (
+    step: AppStep,
+    additionalState?: Record<string, unknown>
+  ) => {
     const paths = {
       landing: "/",
       onboarding: "/onboarding",
@@ -191,6 +206,7 @@ function App() {
 
     window.history.pushState({ step, ...additionalState }, "", paths[step]);
     setCurrentStep(step);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const handleGetStarted = () => {
@@ -200,6 +216,7 @@ function App() {
   const handleOnboardingComplete = (profile: Mentee) => {
     setMenteeProfile(profile);
     sessionStorage.setItem("menteeProfile", JSON.stringify(profile));
+    sessionStorage.removeItem("onboardingDraft");
     navigateToStep("discovery");
   };
 
@@ -221,6 +238,7 @@ function App() {
       : similarMentors;
     const updatedSimilar = allMentors.filter((item) => item.id !== mentor.id);
     setProfileSelection(mentor, updatedSimilar);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const handleBackToDiscovery = () => {
@@ -237,6 +255,7 @@ function App() {
     sessionStorage.removeItem("menteeProfile");
     sessionStorage.removeItem("selectedMentor");
     sessionStorage.removeItem("similarMentors");
+    sessionStorage.removeItem("onboardingDraft");
     navigateToStep("landing");
   };
 
